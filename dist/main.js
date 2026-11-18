@@ -7,24 +7,19 @@ const screen = select('.screen');
 const journey = select('.journey');
 const canvas = select('#car');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const chapterLinks = [...document.querySelectorAll('.chapters a')];
 const stageLabel = select('#stageLabel');
 const stageView = select('#stageView');
-const footerIndex = select('#footerIndex');
-const footerCaption = select('#footerCaption');
 const percent = select('#percent');
-const progress = select('#progress');
 const next = select('.next');
-const nextLabel = select('#nextLabel');
 const nextIcon = select('#nextIcon');
 const zoomControls = select('.zoom-controls');
 const zoomOut = select('#zoomOut');
 const zoomIn = select('#zoomIn');
 
 const chapters = [
-  {label:'EXPLODED VIEW',view:'',caption:'The parts',next:'Start assembly',href:'#assembly',image:'Red supercar components floating in an exploded view'},
-  {label:'ASSEMBLY',view:'',caption:'In assembly',next:'See the car',href:'#reveal',image:'Bodywork, wheels, and powertrain moving into position'},
-  {label:'COMPLETE',view:'DRAG TO ROTATE',caption:'The supercar',next:'Replay',href:'#exploded',image:'Completed red Ferrari 458. Use the arrow keys to rotate it, or plus and minus to zoom.'}
+  {label:'EXPLODED VIEW',view:'',next:'Start assembly',href:'#assembly',image:'Red supercar components floating in an exploded view'},
+  {label:'ASSEMBLY',view:'',next:'See the car',href:'#reveal',image:'Body panels, lights, brakes, and wheels moving into position'},
+  {label:'COMPLETE',view:'DRAG TO ROTATE',next:'Replay',href:'#exploded',image:'Completed red Ferrari 458. Use the arrow keys to rotate it, or plus and minus to zoom.'}
 ];
 const clamp = value => T.MathUtils.clamp(value,0,1);
 const smooth = value => {
@@ -61,19 +56,13 @@ function syncProgress() {
     screen.dataset.stage=stage;
     stageLabel.textContent=number+' / '+data.label;
     stageView.textContent=data.view;
-    footerIndex.textContent=number;
-    footerCaption.textContent=data.caption;
     next.href=data.href;
-    nextLabel.textContent=data.next;
+    next.setAttribute('aria-label',data.next);
+    next.title=data.next;
     nextIcon.textContent=stage===2?'↺':'↓';
     canvas.tabIndex=stage===2&&view?0:-1;
     zoomControls.hidden=stage!==2||!view;
     canvas.setAttribute('aria-label',data.image);
-    for (const [index,link] of chapterLinks.entries()) {
-      if(index===stage) link.setAttribute('aria-current','step');
-      else link.removeAttribute('aria-current');
-    }
-    select('.intro').setAttribute('aria-hidden',String(stage!==0));
     select('.assembly-title').setAttribute('aria-hidden',String(stage!==1));
     select('.reveal-title').setAttribute('aria-hidden',String(stage!==2));
   }
@@ -83,23 +72,21 @@ function syncProgress() {
     activePointer=null;
   }
   percent.textContent=Math.round(value*100)+'%';
-  progress.style.transform='scaleX('+(.04+.96*travel)+')';
   dirty=true;
 }
 window.addEventListener('scroll',syncProgress,{passive:true});
 window.addEventListener('resize',syncProgress);
 reduceMotion.addEventListener('change',syncProgress);
 
-for (const link of [...chapterLinks,next,select('.wordmark')]) {
-  link.addEventListener('click',event=>{
-    if (event.metaKey||event.ctrlKey||event.shiftKey||event.altKey) return;
-    const target=select(link.hash);
-    if (!target) return;
-    event.preventDefault();
-    if(location.hash!==link.hash) history.pushState(null,'',link.hash);
-    target.scrollIntoView({behavior:reduceMotion.matches?'instant':'smooth'});
-  });
-}
+next.addEventListener('click',event=>{
+  if (event.metaKey||event.ctrlKey||event.shiftKey||event.altKey) return;
+  const hash=next.hash;
+  const target=select(hash);
+  if (!target) return;
+  event.preventDefault();
+  if(location.hash!==hash) history.pushState(null,'',hash);
+  target.scrollIntoView({behavior:reduceMotion.matches?'instant':'smooth'});
+});
 
 function studioLighting(renderer) {
   const map=document.createElement('canvas');
@@ -180,9 +167,9 @@ async function init() {
   floor.position.y=.021;
   rig.add(floor);
   const mobilePositions={
-    front:[-.194,.204],rear:[.19,-.221],cabin:[-.194,-.177],floor:[.009,-.347],
+    front:[-.09,.078],rear:[.19,-.218],cabin:[-.255,-.171],floor:[.009,-.347],
     doorRight:[.067,.359],doorLeft:[-.363,.044],
-    wheel_fl:[.243,.235],wheel_fr:[.36,.114],wheel_rl:[.33,-.09],wheel_rr:[-.305,-.294],
+    wheel_fl:[.233,.239],wheel_fr:[.36,.114],wheel_rl:[.33,-.09],wheel_rr:[-.305,-.294],
     brake_wheel_fl:[.111,.138],brake_wheel_fr:[.391,.326],
     brake_wheel_rl:[.35,.01],brake_wheel_rr:[-.346,-.123],
     headlampLeft:[-.274,.135],headlampRight:[-.087,.283],

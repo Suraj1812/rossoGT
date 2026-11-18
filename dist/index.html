@@ -11,22 +11,11 @@
   <script type="module" src="./main.js"></script>
 </head>
 <body>
-  <main class="journey" id="top">
+  <main class="journey" aria-label="Rosso GT supercar assembly">
     <section class="marker" id="exploded" aria-label="Exploded view"></section>
     <section class="marker" id="assembly" aria-label="Assembly"></section>
     <section class="marker" id="reveal" aria-label="Reveal"></section>
     <div class="screen" data-stage="0">
-      <header class="header">
-        <a class="wordmark" href="#exploded" aria-label="Rosso GT, back to start">
-          <i class="marque" aria-hidden="true"></i><span>ROSSO<span class="wordmark-gt"> / GT</span></span>
-        </a>
-        <nav class="chapters" aria-label="Chapters">
-          <a href="#exploded" aria-current="step"><span>01</span> Exploded</a>
-          <a href="#assembly"><span>02</span> Assembly</a>
-          <a href="#reveal"><span>03</span> Reveal</a>
-        </nav>
-        <span class="header-note"><i></i> INTERACTIVE 3D</span>
-      </header>
       <div class="stage" aria-label="Supercar visualization">
         <div class="grid" aria-hidden="true"></div>
         <div class="reticle" aria-hidden="true"><b></b></div>
@@ -35,10 +24,6 @@
         <div class="stage-index"><span class="index-bar"></span><span id="stageLabel">01 / EXPLODED VIEW</span></div>
         <div class="stage-view" id="stageView"></div>
         <canvas id="car" role="img" aria-label="Red supercar components floating in an exploded view"></canvas>
-        <div class="title intro">
-          <h1>Hi<span>.</span></h1>
-          <p>Let’s build a supercar.</p>
-        </div>
         <div class="title assembly-title" aria-hidden="true"><p>ASSEMBLING <span id="percent">0%</span></p></div>
         <div class="title reveal-title" aria-hidden="true"><h2>FERRARI <span>458</span></h2></div>
         <div class="labels" aria-hidden="true">
@@ -54,14 +39,10 @@
           <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
         </div>
         <div class="axis" aria-hidden="true"><i></i><span>X</span><b>Y</b></div>
-        <a class="stage-id" href="./assets/credits.html" target="_blank" rel="noopener">Model credit</a>
+        <a class="stage-id" href="./assets/credits.html" target="_blank" rel="noopener" aria-label="Model credits" title="Model credits">ⓘ</a>
+        <a class="next" href="#assembly" aria-label="Start assembly" title="Start assembly"><span id="nextIcon" aria-hidden="true">↓</span></a>
         <p class="graphics-status" role="status">Loading 3D model…</p>
       </div>
-      <footer class="footer">
-        <div class="footer-caption"><span class="footer-index" id="footerIndex">01</span><span id="footerCaption">The parts</span></div>
-        <div class="progress" aria-hidden="true"><span>01</span><i><b id="progress"></b></i><span>03</span></div>
-        <a class="next" href="#assembly"><span id="nextLabel">Start assembly</span><i id="nextIcon" aria-hidden="true">↓</i></a>
-      </footer>
     </div>
   </main>
 </body>
