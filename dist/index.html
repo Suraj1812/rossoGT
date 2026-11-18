@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111216">
+  <meta name="description" content="Watch a supercar come together in an interactive 3D assembly.">
+  <title>Rosso / GT — Supercar Assembly</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ce2d1e'/%3E%3Cpath d='M8 22 15 10h4l-7 12zm8 0 7-12h3l-7 12z' fill='%23fffaf2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./main.js"></script>
+</head>
+<body>
+  <main class="journey" id="top">
+    <section class="marker" id="exploded" aria-label="Exploded view"></section>
+    <section class="marker" id="assembly" aria-label="Assembly"></section>
+    <section class="marker" id="reveal" aria-label="Reveal"></section>
+    <div class="screen" data-stage="0">
+      <header class="header">
+        <a class="wordmark" href="#exploded" aria-label="Rosso GT, back to start">
+          <i class="marque" aria-hidden="true"></i><span>ROSSO<span class="wordmark-gt"> / GT</span></span>
+        </a>
+        <nav class="chapters" aria-label="Chapters">
+          <a href="#exploded" aria-current="step"><span>01</span> Exploded</a>
+          <a href="#assembly"><span>02</span> Assembly</a>
+          <a href="#reveal"><span>03</span> Reveal</a>
+        </nav>
+        <span class="header-note"><i></i> INTERACTIVE 3D</span>
+      </header>
+      <div class="stage" aria-label="Supercar visualization">
+        <div class="grid" aria-hidden="true"></div>
+        <div class="reticle" aria-hidden="true"><b></b></div>
+        <div class="corner tl" aria-hidden="true"></div><div class="corner tr" aria-hidden="true"></div>
+        <div class="corner bl" aria-hidden="true"></div><div class="corner br" aria-hidden="true"></div>
+        <div class="stage-index"><span class="index-bar"></span><span id="stageLabel">01 / EXPLODED VIEW</span></div>
+        <div class="stage-view" id="stageView"></div>
+        <canvas id="car" role="img" aria-label="Red supercar components floating in an exploded view"></canvas>
+        <div class="title intro">
+          <h1>Hi<span>.</span></h1>
+          <p>Let’s build a supercar.</p>
+        </div>
+        <div class="title assembly-title" aria-hidden="true"><p>ASSEMBLING <span id="percent">0%</span></p></div>
+        <div class="title reveal-title" aria-hidden="true"><h2>FERRARI <span>458</span></h2></div>
+        <div class="labels" aria-hidden="true">
+          <span class="part-label bonnet"><b>FRONT CLIP</b></span>
+          <span class="part-label wheels"><b>WHEEL SET</b></span>
+          <span class="part-label cabin"><b>COCKPIT</b></span>
+          <span class="part-label engine"><b>REAR CLIP</b></span>
+          <span class="part-label brakes"><b>BRAKE DISC</b></span>
+          <span class="part-label lights"><b>HEADLAMP</b></span>
+        </div>
+        <div class="zoom-controls" role="group" aria-label="Model zoom" hidden>
+          <button type="button" id="zoomOut" aria-label="Zoom out" disabled>−</button>
+          <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+        </div>
+        <div class="axis" aria-hidden="true"><i></i><span>X</span><b>Y</b></div>
+        <a class="stage-id" href="./assets/credits.html" target="_blank" rel="noopener">Model credit</a>
+        <p class="graphics-status" role="status">Loading 3D model…</p>
+      </div>
+      <footer class="footer">
+        <div class="footer-caption"><span class="footer-index" id="footerIndex">01</span><span id="footerCaption">The parts</span></div>
+        <div class="progress" aria-hidden="true"><span>01</span><i><b id="progress"></b></i><span>03</span></div>
+        <a class="next" href="#assembly"><span id="nextLabel">Start assembly</span><i id="nextIcon" aria-hidden="true">↓</i></a>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>
