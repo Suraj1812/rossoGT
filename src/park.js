@@ -2,6 +2,7 @@ import * as T from './vendor/three.module.js';
 import {Sky} from './vendor/Sky.js';
 import {batchPark} from './scene-batching.js';
 import {makeDriveRoute,createRoadIndex} from './drive-routes.js';
+import {createRegionalWorld} from './regional-world.js';
 
 const up = new T.Vector3(0,1,0);
 const dummy = new T.Object3D();
@@ -44,9 +45,11 @@ function loadTexture(file,repeat,color=true) {
   return texture;
 }
 
-export function createPark(theme='forest') {
+export function createPark(theme='india') {
   const highway=theme!=='park';
-  const scale=highway?18:1;
+  const regional=['india','newyork','japan','germany'].includes(theme);
+  const urban=theme==='newyork'||theme==='japan';
+  const scale=regional?44:highway?18:1;
   const desert=theme==='desert',coast=theme==='coast';
   const segments=highway?2400:600;
   const roadHalfWidth=highway?10.5:6.5;
@@ -69,7 +72,7 @@ export function createPark(theme='forest') {
   const terrainPositions=terrain.attributes.position;
   for(let i=0;i<terrainPositions.count;i++) {
     const x=terrainPositions.getX(i),z=terrainPositions.getY(i);
-    const rise=Math.max(0,Math.min(1,(Math.max(Math.abs(x),Math.abs(z))-185*scale)/(95*scale)));
+    const rise=regional?0:Math.max(0,Math.min(1,(Math.max(Math.abs(x),Math.abs(z))-185*scale)/(95*scale)));
     terrainPositions.setZ(i,rise*rise*(8+Math.sin(x*.018/scale)*5+Math.cos(z*.023/scale)*4)*Math.sqrt(scale));
   }
   terrain.computeVertexNormals();
@@ -82,8 +85,9 @@ export function createPark(theme='forest') {
   const wood = material(0x644b36,.9);
   const stone = material(0x777d79,.95);
   function pointAt(t,offset=0,height=0) {
-    const position = route.getPointAt((t%1+1)%1);
-    const tangent = route.getTangentAt((t%1+1)%1);
+    const progress=route.closed?(t%1+1)%1:T.MathUtils.clamp(t,0,1);
+    const position = route.getPointAt(progress);
+    const tangent = route.getTangentAt(progress);
     return position.add(new T.Vector3(tangent.z,0,-tangent.x).multiplyScalar(offset)).setY(height);
   }
   function ribbon(offset,width,height,surface) {
@@ -108,11 +112,12 @@ export function createPark(theme='forest') {
   }
   ribbon(0,roadHalfWidth*2,.02,roadSurface);
   for(const side of [-1,1]) {
-    ribbon(side*(roadHalfWidth+.18),.34,.10,curb);
-    ribbon(side*(roadHalfWidth+(highway?3.35:2.85)),highway?2:4.6,.015,paving);
+    if(!regional)ribbon(side*(roadHalfWidth+.18),.34,.10,curb);
+    ribbon(side*(roadHalfWidth+(urban?2.6:highway?3.35:2.85)),urban?5.2:highway?2:4.6,.015,paving);
     ribbon(side*(roadHalfWidth-.62),.095,.027,paint);
     if(highway)ribbon(side*.60,.11,.03,paint);
   }
+  const region=regional?createRegionalWorld(root,route,profile,roadSurface,random):null;
   const dashCount=Math.round(route.getLength()/(highway?13:5));
   const offsets=highway?[-4.1,4.1]:[0];
   // Bounded strips keep offscreen lane markings out of each frame.
@@ -129,12 +134,13 @@ export function createPark(theme='forest') {
     }
     batch.receiveShadow=true;root.add(batch);
   }
-  if(highway) {
+  if(highway&&!urban) {
     const barrierSurface=material(0x9ba5ad,.44,.52);
     function guardrail(offset) {
       const profile=[[-.075,.51],[-.105,.60],[-.042,.67],[-.105,.74],[-.075,.82],[.075,.82],[.075,.51]];
-      for(let start=0;start<segments;start+=80) {
-        const end=Math.min(segments,start+80);
+      for(let start=0;start<segments;start+=24) {
+        if(region&&(start/segments*route.getLength()<80||(1-start/segments)*route.getLength()<80||(theme!=='germany'||offset!==0)&&region.network.atJunction(pointAt(start/segments).x,pointAt(start/segments).z)))continue;
+        const end=Math.min(segments,start+24);
         const points=[],indices=[];
         for(let i=start;i<=end;i++) {
           for(const [x,y] of profile)points.push(...pointAt(i/segments,offset+x,y).toArray());
@@ -152,7 +158,8 @@ export function createPark(theme='forest') {
     for(const [sideIndex,offset]of [-10.45,0,10.45].entries()) {
       guardrail(offset);
       for(let i=0;i<count;i++) {
-        dummy.position.copy(pointAt(i/count,offset,.425));dummy.rotation.set(0,0,0);dummy.scale.setScalar(1);dummy.updateMatrix();
+        dummy.position.copy(pointAt(i/count,offset,.425));
+        if(region&&(i/count*route.getLength()<80||(1-i/count)*route.getLength()<80||(theme!=='germany'||offset!==0)&&region.network.atJunction(dummy.position.x,dummy.position.z)))dummy.position.y=-10;dummy.rotation.set(0,0,0);dummy.scale.setScalar(1);dummy.updateMatrix();
         posts.setMatrixAt(sideIndex*count+i,dummy.matrix);
       }
     }
@@ -161,12 +168,13 @@ export function createPark(theme='forest') {
 
   // Trees share geometry and materials while retaining irregular crowns and branch structure.
   const treePositions = [];
-  const treeCount=desert?0:highway?440:170;
+  const treeCount=desert?0:urban?240:highway?640:170;
   for(let attempt=0;attempt<1600&&treePositions.length<treeCount;attempt++) {
     let x,z;
     if(highway) {
       const point=pointAt(random(),(random()<.5?-1:1)*(22+random()*115),0);x=point.x;z=point.z;
     } else {x=(random()-.5)*330;z=(random()-.5)*270;}
+    if(region?.network.onRoad(x,z)||region?.occupied(x,z)||region?.interaction({x,z}))continue;
     if(roadDistance(x,z)<(highway?23:15)||(!highway&&Math.abs(x)<35&&Math.abs(z)<29))continue;
     treePositions.push({x,z,height:7+random()*8,seed:random()});
   }
@@ -238,6 +246,7 @@ export function createPark(theme='forest') {
   for(const object of [trunks,branches,crowns]) {object.castShadow=true;object.receiveShadow=true;root.add(object);}
 
   // Planting beds, rocks, and benches furnish the inner garden.
+  if(!regional) {
   const flowers = new T.InstancedMesh(new T.IcosahedronGeometry(.095,1),material(0xe9b3ab),900);
   for(let i=0;i<900;i++) {
     const angle=random()*Math.PI*2;
@@ -256,8 +265,9 @@ export function createPark(theme='forest') {
     const rock=mesh(root,new T.IcosahedronGeometry(.65+random()*.4,1),stone,[Math.cos(a)*12.3,.18,Math.sin(a)*7.7]);
     rock.scale.set(1.3,.55,.85);rock.rotation.y=a;
   }
-  for(let i=0;i<24;i++) {
-    const t=i/24;
+  }
+  for(let i=0;i<(urban?80:24);i++) {
+    const t=i/(urban?80:24);
     const p=pointAt(t,-(highway?16.4:12.4),0);
     const tangent=route.getTangentAt(t);
     const bench=new T.Group();bench.position.copy(p);bench.rotation.y=Math.atan2(tangent.x,tangent.z);
@@ -301,12 +311,12 @@ export function createPark(theme='forest') {
       group.add(leg,arm);limbs.push({leg,arm,side});
     }
     root.add(group);
-    walkers.push({group,limbs,t:index/11,offset:index%2?(highway?13.8:9.2):-(highway?13.8:9.2),speed:(.0007+random()*.0006)/scale,phase:random()*6});
+    walkers.push({group,limbs,t:regional?profile.start+(index*17-90)/route.getLength():index/11,offset:index%2?(highway?13.8:9.2):-(highway?13.8:9.2),speed:regional?1.1/route.getLength():(.0007+random()*.0006)/scale,phase:random()*6});
   }
-  for(let i=0;i<(desert?4:11);i++) person(i);
+  for(let i=0;i<(urban?30:regional?4:desert?4:11);i++) person(i);
 
   const animals=[];
-  for(let index=0;index<6;index++) {
+  for(let index=0;index<(regional?(theme==='india'?2:0):6);index++) {
     const group=new T.Group();
     const fur=material([0x9b7951,0x675245,0xd0b68b][index%3]);
     const body=mesh(group,new T.SphereGeometry(.25,14,10),fur,[0,.48,0]);body.scale.set(.7,.85,1.4);
@@ -328,7 +338,7 @@ export function createPark(theme='forest') {
     animals.push({group,legs,tail,t:.1+index*.14,phase:random()*6});
   }
 
-  if(highway) {
+  if(highway&&!urban) {
     const hillShape=new T.SphereGeometry(1,34,20);
     const hillVertices=hillShape.attributes.position;
     for(let i=0;i<hillVertices.count;i++){
@@ -356,7 +366,7 @@ export function createPark(theme='forest') {
     const beach=mesh(root,new T.PlaneGeometry(320,7700),new T.MeshStandardMaterial({map:loadTexture('sand.jpg',[8,190]),color:0xc6b68e,roughness:1}),[1220,-.015,0]);beach.rotation.x=-Math.PI/2;
   }
 
-  if(highway) {
+  if(highway&&!regional) {
     const boardMap=canvasTexture(512,(ctx,size)=>{
       ctx.fillStyle=coast?'#174b62':'#21433c';ctx.fillRect(0,0,size,size);
       ctx.strokeStyle='#dce8de';ctx.lineWidth=9;ctx.strokeRect(18,135,476,242);
@@ -421,7 +431,7 @@ export function createPark(theme='forest') {
   rainGeometry.setAttribute('position',new T.BufferAttribute(rainPositions,3));
   const rain=new T.LineSegments(rainGeometry,new T.LineBasicMaterial({color:0xb8cad8,transparent:true,opacity:.38,depthWrite:false}));root.add(rain);
 
-  const batches=batchPark(root,[...walkers,...animals].map(actor=>actor.group));
+  const batches=batchPark(root,[...walkers,...animals].map(actor=>actor.group).concat(region?.actors??[]));
   let isNight=false,isRain=false;
   function weather(night,raining) {
     isNight=night;isRain=raining;
@@ -471,6 +481,7 @@ export function createPark(theme='forest') {
       animal.legs.forEach((leg,i)=>leg.rotation.x=Math.sin(time*6+animal.phase+i*Math.PI)*.23);
       animal.tail.rotation.z=Math.sin(time*4+animal.phase)*.19;
     });
+    region?.update(time,step,position);
     batches.update();
     if(isRain) {
       rain.position.set(position.x,0,position.z);
@@ -484,6 +495,12 @@ export function createPark(theme='forest') {
 
   function collision(x,z) {
     const distance=roadDistance(x,z);
+    if(region) {
+      if(!urban&&distance<1.25&&(theme==='germany'||!region.network.atJunction(x,z))&&!region.network.atTerminus(x,z))return true;
+      if(region.collision(x,z))return true;
+      for(const tree of treePositions)if((tree.x-x)**2+(tree.z-z)**2<2.2)return true;
+      return false;
+    }
     if(highway&&(distance<1.25||distance>roadHalfWidth-.12))return true;
     for(const tree of treePositions) if((tree.x-x)**2+(tree.z-z)**2<2.2) return true;
     for(const actor of [...walkers,...animals]) {
@@ -501,10 +518,26 @@ export function createPark(theme='forest') {
     clouds.forEach((cloud,index)=>{cloud.visible=preset.shadow>512||index<10;});
   }
   function spawn() {
-    const point=pointAt(profile.start,highway?-6.2:-3.1,0);
+    const point=pointAt(profile.start,highway?(profile.leftHand?6.2:-6.2):-3.1,0);
     const tangent=route.getTangentAt(profile.start);
     return {x:point.x,z:point.z,heading:Math.atan2(tangent.x,tangent.z)};
   }
+  function dispose() {
+    const geometries=new Set(),materials=new Set(),textures=new Set();
+    root.traverse(object=>{
+      if(object.geometry)geometries.add(object.geometry);
+      const list=Array.isArray(object.material)?object.material:[object.material];
+      for(const material of list)if(material) {
+        materials.add(material);
+        for(const value of Object.values(material))if(value?.isTexture)textures.add(value);
+      }
+      object.shadow?.map?.dispose();
+    });
+    for(const geometry of geometries)geometry.dispose();
+    for(const material of materials)material.dispose();
+    for(const texture of textures)texture.dispose();
+    root.removeFromParent();
+  }
   weather(false,false);
-  return {root,route,roadDistance,update,weather,spawn,collision,quality,roadHalfWidth,theme,length:route.getLength(),stats:batches.stats};
+  return {root,route,dispose,roadDistance,onRoad:region?((x,z)=>region.network.onRoad(x,z)||!!region.interaction({x,z})):((x,z)=>roadDistance(x,z)<roadHalfWidth+.1),mapRoads:region?.mapRoads,interaction:region?.interaction,update,weather,spawn,collision,quality,roadHalfWidth,theme,length:route.getLength(),stats:batches.stats};
 }

@@ -320,3 +320,7 @@ h1[data-vehicle="lamborghini"] { font-size:clamp(36px,8.5vmin,93px); }
   .drive-model { font-size:clamp(14px,4vw,19px); }
   .speedometer { min-width:126px; }
 }
+/* Contextual actions appear only when stopped at a service or parking place. */
+.drive-interaction { position:absolute;left:50%;bottom:100px;transform:translateX(-50%);pointer-events:auto; }
+.speedometer { position:relative; }
+.speedometer [data-fuel] { position:absolute;right:9px;top:9px;width:30px;height:4px;accent-color:#c6b58c;opacity:.8; }

@@ -1,5 +1,5 @@
 // Lucide's official UMD library is loaded from jsDelivr, with a local fallback.
-const names={light:'Lightbulb',back:'ArrowLeft',sun:'Sun',moon:'Moon',rain:'CloudRain',sound:'Volume2',mute:'VolumeX',cabin:'Armchair',chase:'CarFront',horn:'Megaphone',reset:'RotateCcw',play:'Play',pause:'Pause',route:'Route',settings:'SlidersHorizontal',park:'Flower2',forest:'Trees',coast:'Waves',desert:'Mountain',brake:'CircleStop',forward:'ChevronsUp',reverse:'ArrowDown'};
+const names={fuel:'Fuel',parking:'SquareParking',city:'Building2',highway:'Milestone',japan:'Landmark',light:'Lightbulb',back:'ArrowLeft',sun:'Sun',moon:'Moon',rain:'CloudRain',sound:'Volume2',mute:'VolumeX',cabin:'Armchair',chase:'CarFront',horn:'Megaphone',reset:'RotateCcw',play:'Play',pause:'Pause',route:'Route',settings:'SlidersHorizontal',park:'Flower2',forest:'Trees',coast:'Waves',desert:'Mountain',brake:'CircleStop',forward:'ChevronsUp',reverse:'ArrowDown'};
 const pending=new Map();
 function render(button,name) {
  const lucide=window.lucide;

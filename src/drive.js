@@ -4,6 +4,7 @@ import {createDriveAudio} from './drive-audio.js';
 import {stepVehicle} from './drive-physics.js';
 import {driveSpecs,readPowertrain} from './drive-specs.js';
 import {createDriver} from './driver.js';
+import {createDriveSession,interactSession,stepDriveSession} from './drive-session.js';
 import {createCabinLighting} from './cabin-lighting.js';
 import {createDriveQuality} from './drive-quality.js';
 import {createDriveMap} from './drive-map.js';
@@ -29,6 +30,9 @@ export function createDrive(renderer,scene,onExit) {
   let park;
   let model;
   let driver;
+  let session=createDriveSession();
+  const interactionButton=ui.querySelector('[data-interaction]');
+  const fuelGauge=ui.querySelector('[data-fuel]');
   let cabinLighting;
   let readingLight=false;
   let instrumentTime=-Infinity;
@@ -44,7 +48,7 @@ export function createDrive(renderer,scene,onExit) {
   let environment;
   let quality;
   let minimap;
-  const themes=Object.keys(driveRoutes);
+  const themes=Object.keys(driveRoutes).filter(id=>!driveRoutes[id].legacy);
   const worlds=new Map();
   let themeIndex=0;
   let renderWidth=0,renderHeight=0;
@@ -56,6 +60,7 @@ export function createDrive(renderer,scene,onExit) {
   let brakeLights=false;
   let pitch=0;
   let roll=0;
+  let cabinSway=0;
   const contactCanvas=document.createElement('canvas');contactCanvas.width=contactCanvas.height=128;
   const contactCtx=contactCanvas.getContext('2d');
   const contactFade=contactCtx.createRadialGradient(64,64,14,64,64,62);
@@ -105,6 +110,8 @@ export function createDrive(renderer,scene,onExit) {
   }
 
   function reset() {
+    session=createDriveSession();
+    interactionButton.hidden=true;fuelGauge.value=1;
     state={...park.spawn(),speed:0,steering:0,wheelRotation:0,spec};
     previousPosition.x=state.x;
     previousPosition.z=state.z;
@@ -131,7 +138,7 @@ export function createDrive(renderer,scene,onExit) {
       park.root.visible=false;
       scene.add(park.root);
       quality=createDriveQuality(renderer,park,ui.querySelector('[data-quality]'));
-      minimap=createDriveMap(ui.querySelector('[data-drive-map]'),park.route);
+      minimap=createDriveMap(ui.querySelector('[data-drive-map]'),park.route,park.mapRoads);
     }
     saved={
       background:scene.background,fog:scene.fog,environment:scene.environment,
@@ -291,16 +298,20 @@ export function createDrive(renderer,scene,onExit) {
     });
   }
   function setTheme(name) {
-    const index=themes.indexOf(name);if(index<0||!running)return;
+    const index=themes.indexOf(name);if(!driveRoutes[name]||!running)return;
     if(!worlds.has(name)) {
+      // Retain one detailed destination, not four complete GPU worlds.
+      park.root.visible=false;park.dispose();worlds.clear();
       const world=createPark(name);world.root.visible=false;scene.add(world.root);worlds.set(name,world);
     }
-    themeIndex=index;park.root.visible=false;park=worlds.get(name);park.root.visible=true;
-    quality.setPark(park);minimap=createDriveMap(ui.querySelector('[data-drive-map]'),park.route);
+    if(index>=0)themeIndex=index;park.root.visible=false;park=worlds.get(name);park.root.visible=true;
+    quality.setPark(park);minimap=createDriveMap(ui.querySelector('[data-drive-map]'),park.route,park.mapRoads);
     routeButton.title=driveRoutes[name].name+' · choose route';
     for(const button of routeOptions.children)button.setAttribute('aria-pressed',String(button.dataset.routeOption===name));
     reset();elapsed=0;previous=undefined;updateWeather();
   }
+  function interact(){interactSession(session,park.interaction?.(state),state.speed);}
+  interactionButton.addEventListener('click',interact);
   ui.querySelector('[data-exit-drive]').addEventListener('click',end);
   ui.querySelector('[data-camera]').addEventListener('click',toggleView);
   ui.querySelector('[data-reset]').addEventListener('click',()=>{reset();audio.start().catch(error=>console.warn('Audio unavailable',error));});
@@ -344,7 +355,7 @@ export function createDrive(renderer,scene,onExit) {
     if(!routePanel.hidden||!settingsPanel.hidden){if(event.code==='Escape'){event.preventDefault();closePanels();}return;}
     if(paused&&event.code!=='Escape')return;
     if(event.code==='Space'&&event.target instanceof HTMLButtonElement)return;
-    const action={Escape:end,KeyC:toggleView,KeyR:reset};
+    const action={Escape:end,KeyC:toggleView,KeyR:reset,KeyE:interact};
     if(action[event.code]) {
       event.preventDefault();
       if(!event.repeat) action[event.code]();
@@ -392,6 +403,9 @@ export function createDrive(renderer,scene,onExit) {
       camera.position.set(driverX,eyeHeight,eyeDepth).applyMatrix4(model.rig.matrixWorld);
       forward.set(Math.sin(state.heading),0,Math.cos(state.heading));
       lookTarget.copy(camera.position).addScaledVector(forward,15);
+      const lateral=(state.yawRate??0)*state.speed;
+      cabinSway=T.MathUtils.lerp(cabinSway,T.MathUtils.clamp(lateral*.003,-.035,.035),1-Math.exp(-delta*5));
+      camera.position.addScaledVector(new T.Vector3(forward.z,0,-forward.x),cabinSway);
       lookTarget.y-=.7;
     } else {
       const difference=state.heading-chaseHeading;
@@ -422,13 +436,24 @@ export function createDrive(renderer,scene,onExit) {
     if(!paused&&routePanel.hidden&&settingsPanel.hidden) {
       elapsed+=delta;
       const controls=input();
+      const place=park.interaction?.(state);
+      stepDriveSession(session,state.speed,controls.forward,delta,place);
+      if(session.fuel<=0||session.parked||session.refueling){controls.forward=0;controls.reverse=0;controls.brake=session.parked||session.refueling;}
+      interactionButton.hidden=!session.parked&&(!place||Math.abs(state.speed)>.6);
+      if(!interactionButton.hidden) {
+        const name=session.parked?'play':place.type==='fuel'?'fuel':'parking';
+        const label=session.parked?'Leave parking · E':session.refueling?'Stop refueling · E':place.type==='fuel'?'Refuel · E':'Park car · E';
+        if(interactionButton.title!==label)setDriveIcon(interactionButton,name,label);
+        interactionButton.setAttribute('aria-pressed',String(session.parked||session.refueling));
+      }
+      fuelGauge.value=session.fuel;fuelGauge.setAttribute('aria-valuetext',Math.round(session.fuel*100)+' percent');
       const speedBefore=state.speed;
       // Check guardrails in substeps, including at 420 km/h on a slow frame.
       const steps=Math.max(1,Math.ceil(Math.abs(state.speed)*delta/.65));
       for(let step=0;step<steps;step++) {
         previousPosition.x=state.x;
         previousPosition.z=state.z;
-        stepVehicle(state,controls,delta/steps,park.roadDistance(state.x,state.z)<park.roadHalfWidth+.1,raining?.8:1);
+        stepVehicle(state,controls,delta/steps,park.onRoad(state.x,state.z),raining?.8:1);
         if(park.collision(state.x,state.z)) {
           state.x=previousPosition.x;
           state.z=previousPosition.z;
@@ -436,7 +461,8 @@ export function createDrive(renderer,scene,onExit) {
           break;
         }
       }
-      model.rig.position.set(state.x,.025,state.z);
+      const roadMotion=Math.min(Math.abs(state.speed)/20,1)*(Math.sin(state.wheelRotation*.19)*.0015+Math.sin(state.wheelRotation*.53)*.0008);
+      model.rig.position.set(state.x,.025+roadMotion,state.z);
       const acceleration=delta>0?(state.speed-speedBefore)/delta:0;
       const damping=1-Math.exp(-delta*8);
       pitch=T.MathUtils.lerp(pitch,T.MathUtils.clamp(-acceleration*.0016,-.019,.024),damping);

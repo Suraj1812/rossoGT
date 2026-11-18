@@ -67,10 +67,15 @@ export function batchPark(root,actors) {
     objects.forEach((object,index)=>{object.visible=false;batch.setColorAt(index,object.material.color);});
     root.add(batch);instances.push({batch,objects});
   }
+  const tint=new T.Color();
   function update() {
     for(const actor of actors)actor.updateMatrixWorld(true);
     for(const {batch,objects} of instances) {
-      objects.forEach((object,index)=>batch.setMatrixAt(index,object.matrixWorld));
+      objects.forEach((object,index)=>{
+        batch.setMatrixAt(index,object.matrixWorld);
+        if(object.material.emissive?.getHex())batch.setColorAt(index,tint.copy(object.material.color).multiplyScalar(1+object.material.emissiveIntensity*3));
+      });
+      if(batch.instanceColor)batch.instanceColor.needsUpdate=true;
       batch.instanceMatrix.needsUpdate=true;
     }
   }

@@ -71,9 +71,11 @@
       <button type="button" data-sound aria-pressed="false" aria-label="Mute sound"></button>
       <button type="button" data-reset aria-label="Reset car"></button>
     </div>
+    <button class="drive-interaction" type="button" data-interaction hidden aria-label="Interact"></button>
     <canvas class="drive-map" data-drive-map aria-label="Route map with your car position"></canvas>
     <div class="drive-bottom">
       <div class="speedometer">
+        <progress data-fuel max="1" value="1" aria-label="Fuel remaining" title="Fuel remaining"></progress>
         <div><strong data-speed>000</strong><span>KM/H</span><b data-gear>N</b></div>
         <i><span data-revs></span></i>
       </div>
@@ -104,7 +106,7 @@
       if (retry && event.key === 'Enter') location.reload();
     });
     const watchdog = setTimeout(() => offerRetry('The 3D model is taking longer than expected.'), 12000);
-    import('/scene-TKU6WOFB.js').then(scene => scene.start()).then(() => {
+    import('/scene-TYBENBPK.js').then(scene => scene.start()).then(() => {
       retry = false;
       statusMessage.textContent = '';
     }).catch(error => {

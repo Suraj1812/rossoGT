@@ -1,25 +1,37 @@
 import {CatmullRomCurve3,Vector3} from './vendor/three.module.js';
 
 export const driveRoutes={
- forest:{name:'Forest Ridge',icon:'forest',start:.012,points:[
+ india:{name:'India · Grand Trunk Highway',icon:'highway',region:'india',closed:false,leftHand:true,start:.025,points:[
+  [0,-10000],[0,-7000],[130,-4200],[380,-1800],[300,600],[-160,3000],[-250,6000],[100,10000]
+ ]},
+ newyork:{name:'New York · Westside',icon:'city',region:'newyork',urban:true,closed:false,start:.06,points:[
+  [0,-2800],[0,-1600],[0,0],[0,1600],[0,2800]
+ ]},
+ japan:{name:'Japan · Sakura Route',icon:'japan',region:'japan',urban:true,closed:false,leftHand:true,start:.04,points:[
+  [0,-6200],[0,-4200],[180,-2500],[250,-800],[140,900],[-140,2700],[-80,4400],[200,6200]
+ ]},
+ germany:{name:'Germany · Autobahn',icon:'highway',region:'germany',closed:false,start:.025,points:[
+  [0,-12000],[0,-8000],[100,-4000],[350,-1600],[250,1600],[-200,5000],[-300,8500],[0,12000]
+ ]},
+ forest:{legacy:true,name:'Forest Ridge',icon:'forest',start:.012,points:[
   [-1380,-770],[-780,-810],[-300,-730],[80,-880],[660,-880],[1390,-660],[1590,-140],
   [1350,430],[1560,910],[1020,1220],[410,1150],[-85,890],[-520,1100],[-1170,1170],[-1590,710],[-1640,30]
  ]},
- coast:{name:'Coastal Causeway',icon:'coast',start:.29,points:[
+ coast:{legacy:true,name:'Coastal Causeway',icon:'coast',start:.29,points:[
   [-1180,-1040],[-530,-1130],[200,-1050],[850,-790],[1040,-290],[1010,220],[1130,770],
   [820,1270],[230,1500],[-600,1420],[-1150,1120],[-1380,560],[-1260,120],[-1500,-450]
  ]},
- desert:{name:'Red Rock Highway',icon:'desert',start:.031,points:[
+ desert:{legacy:true,name:'Red Rock Highway',icon:'desert',start:.031,points:[
   [-3000,-1000],[-2675,-1000],[-1800,-1000],[-300,-1000],[1200,-1000],[2290,-1000],[2730,-1000],[3010,-730],[2840,-195],[2120,-180],
   [1590,330],[1110,650],[1330,1120],[740,1490],[-180,1400],[-920,1220],[-1660,1260],[-2410,670],[-3030,-230],[-3190,-770]
  ]},
- park:{name:'Garden Circuit',icon:'park',start:.025,points:[
+ park:{legacy:true,name:'Garden Circuit',icon:'park',start:.025,points:[
   [-78,-59],[0,-69],[74,-59],[93,-25],[93,30],[74,59],[0,69],[-74,59],[-93,25],[-93,-28]
  ]}
 };
 export function makeDriveRoute(id) {
- const profile=driveRoutes[id]??driveRoutes.forest;
- const curve=new CatmullRomCurve3(profile.points.map(([x,z])=>new Vector3(x,0,z)),true,'centripetal');
+ const profile=driveRoutes[id]??driveRoutes.india;
+ const curve=new CatmullRomCurve3(profile.points.map(([x,z])=>new Vector3(x,0,z)),profile.closed!==false,'centripetal');
  curve.arcLengthDivisions=2048;
  return {curve,profile};
 }
