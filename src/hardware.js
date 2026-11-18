@@ -1,4 +1,4 @@
-import * as T from './assets/three.module.js';
+import * as T from './vendor/three.module.js';
 
 function tireTextures() {
   const map=document.createElement('canvas');

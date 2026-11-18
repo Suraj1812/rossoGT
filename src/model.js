@@ -1,6 +1,6 @@
-import * as T from './assets/three.module.js';
-import { GLTFLoader } from './assets/GLTFLoader.js';
-import { DRACOLoader } from './assets/DRACOLoader.js';
+import * as T from './vendor/three.module.js';
+import { GLTFLoader } from './vendor/GLTFLoader.js';
+import { DRACOLoader } from './vendor/DRACOLoader.js';
 import { createHardware } from './hardware.js';
 
 const asset = file => new URL('./assets/'+file,import.meta.url).href;

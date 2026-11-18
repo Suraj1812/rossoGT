@@ -1,6 +1,6 @@
-import * as T from './assets/three.module.js';
+import * as T from './vendor/three.module.js';
 import {createCar} from './model.js';
-import {HDRLoader} from './assets/HDRLoader.js';
+import {HDRLoader} from './vendor/HDRLoader.js';
 
 const select = selector => document.querySelector(selector);
 const screen = select('.screen');
@@ -136,14 +136,15 @@ async function init() {
   renderer.toneMapping=T.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.16;
   const scene=new T.Scene();
-  const lighting=new HDRLoader().loadAsync(new URL('./assets/studio.hdr',import.meta.url))
-    .then(texture=>{
-      texture.mapping=T.EquirectangularReflectionMapping;
-      return texture;
-    })
-    .catch(()=>studioLighting(renderer).texture);
-  const [{rig,parts},environment]=await Promise.all([createCar(),lighting]);
-  scene.environment=environment;
+  const lighting=new HDRLoader().loadAsync(new URL('./assets/studio.hdr',import.meta.url)).catch(()=>null);
+  const {rig,parts}=await createCar();
+  scene.environment=studioLighting(renderer).texture;
+  lighting.then(texture=>{
+    if(!texture) return;
+    texture.mapping=T.EquirectangularReflectionMapping;
+    scene.environment=texture;
+    dirty=true;
+  });
   scene.environmentIntensity=.69;
   scene.environmentRotation.y=-.9;
   const camera=new T.OrthographicCamera(-1,1,1,-1,.1,100);
@@ -196,7 +197,8 @@ async function init() {
   canvas.addEventListener('webglcontextlost',event=>{
     event.preventDefault();
     contextLost=true;
-    status.textContent='3D rendering paused. Waiting for graphics to recover…';
+    status.querySelector('span').textContent='3D rendering paused.';
+    select('.graphics-status').querySelector('button').hidden=false;
     status.hidden=false;
   });
   canvas.addEventListener('webglcontextrestored',()=>{
@@ -206,7 +208,6 @@ async function init() {
   });
 
   function draw(now) {
-    requestAnimationFrame(draw);
     if(contextLost) return;
     const idle=!reduceMotion.matches&&stage===0;
     const moving=Math.abs(angle-rotation)>.0008;
@@ -265,7 +266,12 @@ async function init() {
     renderer.render(scene,camera);
     rendered=true;
   }
-  requestAnimationFrame(draw);
+  function frame(now) {
+    draw(now);
+    requestAnimationFrame(frame);
+  }
+  draw(performance.now());
+  requestAnimationFrame(frame);
   return {renderer};
 }
 
@@ -297,15 +303,10 @@ canvas.addEventListener('keydown',event=>{
   }
 });
 
-const status=select('.graphics-status');
-syncProgress();
-init().then(result=>{
-  view=result;
+export async function start() {
+  syncProgress();
+  view=await init();
   screen.classList.add('is-ready');
-  status.hidden=true;
   canvas.tabIndex=stage===2?0:-1;
   zoomControls.hidden=stage!==2;
-}).catch(error=>{
-  status.textContent='The 3D scene could not load.';
-  console.error(error);
-});
+}

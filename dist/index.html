@@ -8,7 +8,6 @@
   <title>Rosso / GT — Supercar Assembly</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ce2d1e'/%3E%3Cpath d='M8 22 15 10h4l-7 12zm8 0 7-12h3l-7 12z' fill='%23fffaf2'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./main.js"></script>
 </head>
 <body>
   <main class="journey" aria-label="Rosso GT supercar assembly">
@@ -41,9 +40,31 @@
         <div class="axis" aria-hidden="true"><i></i><span>X</span><b>Y</b></div>
         <a class="stage-id" href="./assets/credits.html" target="_blank" rel="noopener" aria-label="Model credits" title="Model credits">ⓘ</a>
         <a class="next" href="#assembly" aria-label="Start assembly" title="Start assembly"><span id="nextIcon" aria-hidden="true">↓</span></a>
-        <p class="graphics-status" role="status">Loading 3D model…</p>
+        <div class="graphics-status" hidden>
+          <span role="status">Loading 3D model…</span>
+          <button type="button" hidden>Retry</button>
+        </div>
+        <noscript><p class="graphics-status">Enable JavaScript to view the 3D model.</p></noscript>
       </div>
     </div>
   </main>
+  <script>
+    const notice = document.querySelector('.graphics-status');
+    const message = notice.querySelector('span');
+    const retry = notice.querySelector('button');
+    notice.hidden = false;
+    retry.addEventListener('click', () => location.reload());
+    const watchdog = setTimeout(() => {
+      message.textContent = 'The 3D model is taking longer than expected.';
+      retry.hidden = false;
+    }, 8000);
+    import('./scene-NVF72WP4.js').then(scene => scene.start()).then(() => {
+      notice.hidden = true;
+    }).catch(error => {
+      message.textContent = 'The 3D model couldn’t load.';
+      retry.hidden = false;
+      console.error(error);
+    }).finally(() => clearTimeout(watchdog));
+  </script>
 </body>
 </html>
