@@ -67,6 +67,7 @@
       <button type="button" data-quality aria-label="Graphics quality">Auto</button>
       <button type="button" data-day aria-pressed="false" aria-label="Toggle night"></button>
       <button type="button" data-rain aria-pressed="false" aria-label="Toggle rain"></button>
+      <button type="button" data-cabin-light aria-pressed="false" aria-label="Toggle cabin reading lights"></button>
       <button type="button" data-sound aria-pressed="false" aria-label="Mute sound"></button>
       <button type="button" data-reset aria-label="Reset car"></button>
     </div>
@@ -103,7 +104,7 @@
       if (retry && event.key === 'Enter') location.reload();
     });
     const watchdog = setTimeout(() => offerRetry('The 3D model is taking longer than expected.'), 12000);
-    import('/scene-BXHMDZ35.js').then(scene => scene.start()).then(() => {
+    import('/scene-TKU6WOFB.js').then(scene => scene.start()).then(() => {
       retry = false;
       statusMessage.textContent = '';
     }).catch(error => {

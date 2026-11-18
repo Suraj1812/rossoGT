@@ -153,6 +153,7 @@ export async function createCar() {
     ...assembleGroups(groups,layout),
     seats:{driverX,eyeHeight:1.085,eyeDepth:-.263},
     steering,updateInstruments:finishes.updateInstruments,
+    setInstrumentLighting:finishes.setInstrumentLighting,
     setMirrors:finishes.setMirrors
   };
 }

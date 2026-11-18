@@ -176,6 +176,7 @@ export function createFinishes(model) {
   const weave = grain('carbon');
   const dial = dialTexture();
   const screenUpdates=[];
+  const screenMaterials=[];
   const bump = (map, bumpScale) => ({bumpMap:map,bumpScale});
   const materials = {
     leather:material({color:0x202125,roughness:.86,metalness:0,...bump(leather,.007)}),
@@ -296,6 +297,7 @@ export function createFinishes(model) {
       });
       screenUpdates.push(reading=>{update(reading);face.needsUpdate=true;});
       const screen = new T.Mesh(new T.PlaneGeometry(.085,.061),new T.MeshBasicMaterial({map:face,color:0xc7d1dc}));
+      screenMaterials.push(screen.material);
       screen.rotation.y = Math.PI;
       screen.position.set(driverX+offset,.79,.659);
       group.add(screen);
@@ -307,6 +309,10 @@ export function createFinishes(model) {
     updateInstruments(reading) {
       dial.update(reading);
       for(const update of screenUpdates)update(reading);
+    },
+    setInstrumentLighting(night) {
+      materials.dial.emissiveIntensity=night?.42:.18;
+      for(const material of screenMaterials)material.color.setHex(night?0x7c8b9e:0xc7d1dc);
     },
     mirrorPlanes,
     setMirrors(enabled,{driving=false}={}) {

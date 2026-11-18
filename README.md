@@ -6,7 +6,7 @@ Choose one of the four cars, scroll until assembly finishes, then select **Test 
 - Space: brake. H: horn. C: cabin/chase camera. R: reset. Escape: return.
 - Touch: drag the steering pad and hold accelerator, brake or reverse.
 - Auto graphics reduces resolution and shadow cost after sustained slow frames. Click it to select High, Balanced or Performance.
-- Sun/Moon and Rain change lighting, road grip, headlights and weather. Losing tab focus pauses the drive.
+- Sun/Moon and Rain change lighting, road grip, headlights and weather. The bulb icon in drive settings switches cabin reading lamps. Footwells light up at night; BMW and Bugatti have restrained door accents. Instruments adjust brightness with night mode. Cabin placements approximate the available model geometry, not exact factory specifications. Losing tab focus pauses the drive.
 
 ## Local development
 

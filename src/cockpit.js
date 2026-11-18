@@ -149,5 +149,6 @@ export function digitalCluster(node,id) {
   geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
   node.geometry=geometry;
   node.material=new T.MeshBasicMaterial({map:gauge.map,side:node.material.side,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1});
+  gauge.update.setLighting=night=>node.material.color.setScalar(night?.58:1);
   return gauge.update;
 }

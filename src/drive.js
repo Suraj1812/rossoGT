@@ -4,6 +4,7 @@ import {createDriveAudio} from './drive-audio.js';
 import {stepVehicle} from './drive-physics.js';
 import {driveSpecs,readPowertrain} from './drive-specs.js';
 import {createDriver} from './driver.js';
+import {createCabinLighting} from './cabin-lighting.js';
 import {createDriveQuality} from './drive-quality.js';
 import {createDriveMap} from './drive-map.js';
 import {initDriveIcons,setDriveIcon} from './drive-icons.js';
@@ -28,6 +29,8 @@ export function createDrive(renderer,scene,onExit) {
   let park;
   let model;
   let driver;
+  let cabinLighting;
+  let readingLight=false;
   let instrumentTime=-Infinity;
   let running=false;
   let paused=false;
@@ -81,6 +84,13 @@ export function createDrive(renderer,scene,onExit) {
     };
   }
 
+  function updateCabinLighting() {
+    cabinLighting?.update({night,cabin,reading:readingLight});
+    model?.updateInstruments?.setLighting?.(night);
+    model?.setInstrumentLighting?.(night);
+    ui.querySelector('[data-cabin-light]').setAttribute('aria-pressed',String(readingLight));
+  }
+
   function updateWeather() {
     if(!park || !running) return;
     scene.fog=park.weather(night,raining);
@@ -91,6 +101,7 @@ export function createDrive(renderer,scene,onExit) {
     for(const light of headlights) light.visible=night||raining;
     renderer.toneMappingExposure=night?1.05:raining?.9:.84;
     scene.environmentIntensity=night?.12:raining?.24:.32;
+    updateCabinLighting();
   }
 
   function reset() {
@@ -177,6 +188,8 @@ export function createDrive(renderer,scene,onExit) {
     document.body.setAttribute('data-driving','');
     driver=model.driver??=createDriver(model.seats,model.steering);
     if(driver)model.rig.add(driver.rig);
+    cabinLighting=model.cabinLighting??=createCabinLighting(id);
+    model.rig.add(cabinLighting.root);
     reset();
     if(headlights.length===0) {
       for(const x of [-.65,.65]) {
@@ -202,6 +215,9 @@ export function createDrive(renderer,scene,onExit) {
     document.body.removeAttribute('data-driving');
     model.setMirrors?.(false);
     driver?.rig.removeFromParent();
+    cabinLighting?.root.removeFromParent();
+    model.updateInstruments?.setLighting?.(false);
+    model.setInstrumentLighting?.(false);
     updateCabin(0,{speed:0,gear:'N',revs:.12,brake:false},true);
     model.rig.visible=false;
     model.rig.position.set(0,0,0);
@@ -231,6 +247,7 @@ export function createDrive(renderer,scene,onExit) {
     setDriveIcon(ui.querySelector('[data-camera]'),cabin?'chase':'cabin',cabin?'Chase camera':'Driver seat view');
     model.setMirrors?.(cabin,{driving:true});
     driver?.update(steeringTurn(),cabin);
+    updateCabinLighting();
     instrumentTime=-Infinity;
     chaseHeading=state.heading;
     positionCamera(0);
@@ -287,6 +304,7 @@ export function createDrive(renderer,scene,onExit) {
   ui.querySelector('[data-exit-drive]').addEventListener('click',end);
   ui.querySelector('[data-camera]').addEventListener('click',toggleView);
   ui.querySelector('[data-reset]').addEventListener('click',()=>{reset();audio.start().catch(error=>console.warn('Audio unavailable',error));});
+  ui.querySelector('[data-cabin-light]').addEventListener('click',()=>{readingLight=!readingLight;updateCabinLighting();});
   ui.querySelector('[data-day]').addEventListener('click',()=>{night=!night;updateWeather();});
   ui.querySelector('[data-rain]').addEventListener('click',()=>{raining=!raining;updateWeather();});
   ui.querySelector('[data-sound]').addEventListener('click',event=>{

@@ -173,6 +173,7 @@ function bugattiDetail(node) {
   node.geometry = geometry;
   const dial=dialMap();
   node.material=new T.MeshBasicMaterial({map:dial.texture,side:T.DoubleSide,toneMapped:false});
+  dial.update.setLighting=night=>node.material.color.setScalar(night?.58:1);
   return dial.update;
 }
 
