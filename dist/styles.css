@@ -1,81 +1,322 @@
-@font-face{font-family:Barlow;src:url('./assets/barlow.woff2') format('woff2');font-style:italic;font-weight:900;font-display:swap}
-@font-face{font-family:Plex;src:url('./assets/plex.woff2') format('woff2');font-display:swap}
-@font-face{font-family:Inter;src:url('./assets/inter.woff2') format('woff2');font-weight:100 900;font-display:swap}
-:root{--paper:#111216;--stage:#1b1d22;--ink:#f4f0ea;--muted:#afb1b9;--rule:#34363d;--red:#fa624c;--action:#c73022;--mono:Plex,monospace;--margin:clamp(15px,2.4vw,44px);font-family:Inter,Arial,sans-serif;color:var(--ink);background:var(--paper);color-scheme:dark}
-*{box-sizing:border-box}
-body{margin:0}
-a{color:inherit;text-decoration:none}
-a:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid var(--red);outline-offset:5px}
-.journey{height:330svh;position:relative}
-.marker{position:absolute;width:1px;height:1px;pointer-events:none}
-#exploded{top:0}#assembly{top:93svh}#reveal{top:230svh}
-.screen{position:sticky;top:0;height:100svh;min-height:385px;display:grid;grid-template-rows:minmax(0,1fr);padding:clamp(15px,3svh,30px) var(--margin);overflow:hidden}
-.stage-index,.stage-view,.stage-id,.part-label,.axis,.assembly-title{font:11px/1.25 var(--mono);letter-spacing:.06em}
-.stage{position:relative;isolation:isolate;overflow:hidden;border:1px solid var(--rule);background:radial-gradient(ellipse at 49% 45%,#262830 0%,var(--stage) 60%,#17181c 100%)}
-.grid{position:absolute;inset:0;background-image:linear-gradient(#b8bec317 1px,transparent 1px),linear-gradient(90deg,#b8bec317 1px,transparent 1px);background-size:38px 38px;background-position:center;mask-image:radial-gradient(ellipse at center,#000 20%,#0004 100%);pointer-events:none}
-.reticle{position:absolute;left:50%;top:50%;width:min(49%,60svh);aspect-ratio:1;transform:translate(-50%,-50%);border:1px solid #9ca1ac35;border-radius:50%;pointer-events:none;transition:opacity .4s}
-.reticle::before,.reticle::after,.reticle b::before,.reticle b::after{content:"";position:absolute}
-.reticle::before{inset:7%;border:1px dashed #9ca1ac42;border-radius:50%}
-.reticle::after{inset:-12%;border:1px solid #9ca1ac26;border-radius:50%}
-.reticle b::before{top:50%;height:1px;width:calc(100% + 96px);left:-48px;background:#9ca1ac32}
-.reticle b::after{left:50%;height:calc(100% + 96px);width:1px;top:-48px;background:#9ca1ac32}
-.corner{position:absolute;z-index:3;width:12px;height:12px;border:0 solid #747780;pointer-events:none}
-.tl{top:10px;left:10px;border-width:1px 0 0 1px}.tr{top:10px;right:10px;border-width:1px 1px 0 0}.bl{bottom:10px;left:10px;border-width:0 0 1px 1px}.br{bottom:10px;right:10px;border-width:0 1px 1px 0}
-.stage-index,.stage-view,.stage-id,.axis{position:absolute;z-index:3;color:var(--muted);pointer-events:none}
-.stage-index{top:25px;left:26px;display:flex;align-items:center;gap:9px;color:var(--ink)}
-.index-bar{background:var(--red);width:14px;height:2px}
-.stage-view{top:25px;right:26px}
-.stage-id{bottom:26px;left:66px;pointer-events:auto;font:17px/1 Inter,sans-serif}.stage-id:hover{color:var(--ink)}
-.axis{bottom:24px;left:26px;width:31px;height:27px;font-size:9px}
-.axis i{position:absolute;bottom:3px;left:2px;width:16px;height:16px;border-left:1px solid var(--muted);border-bottom:1px solid var(--muted)}
-.axis span{position:absolute;bottom:0;right:0}
-.axis b{position:absolute;top:0;left:0;font-weight:400}
-#car{position:absolute;width:100%;height:100%;inset:0;z-index:1;touch-action:pan-y;outline-offset:-5px}
-[data-stage="2"] #car{cursor:grab}[data-stage="2"] #car:active{cursor:grabbing}
-.title{position:absolute;left:50%;z-index:2;text-align:center;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;transition:opacity .3s,translate .4s;opacity:0;translate:0 10px}
-.title h2{font:italic 900 clamp(126px,25svh,248px)/.76 Barlow,Impact,sans-serif;margin:0;letter-spacing:-.018em}
-.title h2 span{color:var(--red)}
-[data-stage="1"] .assembly-title,[data-stage="2"] .reveal-title{opacity:1;translate:0 0}
-.assembly-title{top:auto;bottom:8%;transform:translateX(-50%)}
-.assembly-title p{display:flex;gap:17px;align-items:center;margin:0}
-.assembly-title span{color:var(--red);min-width:35px;text-align:right}
-.reveal-title{top:22%;z-index:0}
-.title h2{font-size:clamp(65px,16svh,160px);letter-spacing:-.024em;color:#ece0d24b}
-[data-stage="2"] .reticle{opacity:.27}
-[data-stage="2"] .stage{background:radial-gradient(ellipse at 53% 63%,#343640 0%,#22242a 48%,#191a1e 76%)}
-.zoom-controls{position:absolute;z-index:4;left:50%;bottom:24px;transform:translateX(-50%);display:flex;border:1px solid #666873;background:#1b1d22}
-.zoom-controls button{display:grid;place-items:center;width:38px;height:32px;border:0;padding:0;background:transparent;color:var(--ink);font:18px var(--mono);cursor:pointer}
-.zoom-controls button+button{border-left:1px solid #666873}
-.zoom-controls button:hover{background:#343640}
-.zoom-controls button:disabled{color:#777983;cursor:default;background:transparent}
-.labels{transition:opacity .25s;pointer-events:none}
-.screen:not([data-stage="0"]) .labels{opacity:0}
-.part-label{position:absolute;z-index:2;color:var(--red);display:flex;align-items:center;gap:7px;font-size:10px}
-.part-label b{font-weight:400;color:var(--muted)}
-.part-label::before{content:"";height:1px;width:20px;background:#777c8a}
-.bonnet{left:33%;top:56%}.wheels{right:20%;top:10%}.cabin{left:21%;bottom:5%}.engine{right:14%;bottom:11%}.brakes{right:25%;top:42%}.lights{left:26%;top:28%}
-.graphics-status{position:absolute;z-index:4;left:50%;bottom:11%;transform:translateX(-50%);background:var(--paper);padding:10px;font-size:12px;text-align:center;margin:0;max-width:85%}
-[hidden]{display:none!important}
-@media(max-width:700px){
- .reveal-title{top:30%}
-
- .stage-index,.stage-view,.stage-id{font-size:9px}
- .stage-index{left:17px;top:18px;gap:6px}.stage-view{right:17px;top:18px}.stage-id{left:58px;bottom:21px;font-size:16px}.axis{left:17px;bottom:16px}
- .corner{width:7px;height:7px;inset:auto}.tl{top:7px;left:7px}.tr{top:7px;right:7px}.bl{bottom:7px;left:7px}.br{bottom:7px;right:7px}
- .grid{background-size:26px 26px}
- .reticle{width:72%}
- .zoom-controls{bottom:24px}
- .labels{display:none}
- .title h2{font-size:clamp(59px,16vw,97px)}
+@font-face {
+  font-family: Barlow;
+  src: url('./assets/barlow.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
 }
-@media(max-height:500px) and (min-width:701px){.part-label{display:none}.title h2{font-size:70px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
 
+:root {
+  color-scheme: dark;
+  color: #f2efea;
+  font-family: system-ui, sans-serif;
+}
 
-.reveal-title h2 span{color:#fa624c70}
-.screen:not(.is-ready) .labels{opacity:0}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: #111; }
+.journey { height: 100svh; position: relative; }
+.journey[data-selected] { height: 330svh; }
+.screen {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
 
-.next{position:absolute;z-index:4;right:25px;bottom:24px;display:grid;place-items:center;width:38px;height:38px;border:1px solid #8a4138;color:var(--ink);background:#552520;font:21px/1 Inter,sans-serif;transition:background .2s}
-.next:hover{background:#a9281e}
-@media(max-width:700px){.next{right:17px;bottom:16px}.zoom-controls{bottom:18px}}
-.graphics-status button{margin-left:10px;padding:5px 9px;background:#352525;border:1px solid #97645d;color:var(--ink);cursor:pointer}
+h1 {
+  position: absolute;
+  top: 10%;
+  inset-inline: 0;
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  font: italic 900 clamp(2.15rem,9.05vmin,7rem)/1 Barlow, Impact, sans-serif;
+  letter-spacing: -.018em;
+}
+
+#car {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  outline-offset: -4px;
+}
+
+[data-complete] #car { cursor: grab; touch-action: none; }
+[data-complete] #car:active { cursor: grabbing; }
+#car:focus { outline: none; }
+#car:focus-visible:not([data-pointer-focus]) { outline: 1px solid #858585; }
+
+/* The transparent edge strips preserve native swipe-to-scroll around the model. */
+@media (pointer: coarse) {
+  [data-complete]::before, [data-complete]::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    width: 16px;
+    inset-block: 0;
+    touch-action: pan-y;
+  }
+  [data-complete]::before { left: 0; }
+  [data-complete]::after { right: 0; }
+}
+
+@media (max-width: 650px) {
+  h1 { top: 19%; }
+  [data-model="lamborghini"] h1 { font-size: 7.4vw; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.garage {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  margin: auto;
+  width: min(96%,1300px);
+  height: min(88%,840px);
+  display: none;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  grid-template-rows: repeat(2,minmax(0,1fr));
+  gap: clamp(8px,2vw,32px);
+}
+[data-catalog] .garage { display: grid; }
+.garage a { display: block; cursor: pointer; touch-action: manipulation; }
+.garage a:focus-visible { outline: 1px solid #858585; outline-offset: -4px; }
+
+[hidden] { display: none !important; }
+body[data-driving] { overflow: hidden; }
+button { font: inherit; cursor: pointer; }
+.garage a { position: relative; }
+.garage a > .vehicle-name {
+  position: absolute;
+  left: 8%;
+  bottom: 8%;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .4em;
+  font: italic 900 clamp(.8rem,2vmin,1.25rem)/1.15 Barlow,sans-serif;
+  letter-spacing: .03em;
+  color: #dededb;
+}
+.garage a b { font-weight: 900; color: #999b9e; }
+.test-drive {
+  position: absolute;
+  z-index: 3;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 13px 20px;
+  border: 1px solid #72767c;
+  background: #202328;
+  color: #f5f4ef;
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+.test-drive:hover { background: #343a41; }
+.drive-hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; color: #fff; }
+.drive-hud button {
+  pointer-events: auto;
+  color: #f7f5ed;
+  border: 1px solid #ffffff50;
+  background: #182028d1;
+  backdrop-filter: blur(12px);
+  padding: 9px 13px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  touch-action: none;
+}
+.drive-hud button:hover, .drive-hud button[aria-pressed="true"] { background: #4b5b5bd9; border-color: #d3d6bd; }
+.drive-top {
+  position: absolute; top: 24px; left: 28px; right: 28px;
+  display: flex; align-items: center; gap: 16px;
+}
+.drive-model { font: italic 900 clamp(19px,2.3vw,31px)/1 Barlow,sans-serif; text-shadow: 0 2px 20px #0008; }
+.conditions { display: flex; gap: 6px; margin-left: auto; }
+.drive-bottom {
+  position: absolute; bottom: 25px; left: 28px; right: 28px;
+  display: flex; align-items: end; gap: 26px;
+}
+.speedometer { background: #121921bf; backdrop-filter: blur(12px); border-left: 2px solid #ded7b8; padding: 12px 15px; min-width: 162px; }
+.speedometer div { display: flex; align-items: baseline; gap: 9px; }
+.speedometer strong { font: italic 900 48px/.85 Barlow,sans-serif; font-variant-numeric: tabular-nums; }
+.speedometer span { color: #c3c9ce; font-size: 9px; letter-spacing: .06em; }
+.speedometer b { margin-left: auto; font-size: 16px; font-weight: 500; color: #e6c88f; }
+.speedometer i { display: block; height: 2px; background: #a5afba46; margin-top: 11px; }
+.speedometer i span { display: block; width: 100%; height: 100%; background: #e6c88f; transform-origin: left; transform: scaleX(.13); }
+.drive-help { font-size: 10px; letter-spacing: .03em; text-shadow: 0 1px 6px #000; }
+.drive-help span { margin: 0 6px; }
+.drive-actions { margin-left: auto; display: flex; gap: 6px; }
+.resume-drive { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); }
+.touch-driving { display: none; }
+@media (max-width: 720px) {
+  .drive-top { top: 14px; left: 14px; right: 14px; gap: 10px; flex-wrap: wrap; }
+  .drive-model { font-size: 19px; max-width: calc(100% - 70px); }
+  .conditions { flex-basis: 100%; margin-left: 0; }
+  .drive-hud button { padding: 9px 11px; }
+  .drive-bottom { left: 14px; right: 14px; bottom: 18px; gap: 12px; }
+  .drive-help { display: none; }
+  .speedometer { min-width: 135px; }
+  .speedometer strong { font-size: 39px; }
+}
+@media (pointer: coarse) {
+  .touch-driving {
+    display: flex; justify-content: space-between;
+    position: absolute; bottom: 105px; left: 14px; right: 14px; gap: 12px;
+  }
+  .touch-driving div { display: flex; gap: 7px; align-items: end; }
+  .touch-driving button { min-width: 48px; min-height: 55px; font-size: 17px; }
+  .touch-driving [data-control="forward"] { height: 75px; border-color: #c7c9a9; }
+}
+button:focus-visible { outline: 2px solid #e4cf9e; outline-offset: 4px; }
+.drive-hud .steering-pad {
+  width: 116px; height: 116px; border-radius: 50%; padding: 18px;
+  background: radial-gradient(circle,#4b596356,#101921b8);
+  border: 1px solid #e6eced66;
+}
+.steering-pad span {
+  display: grid; place-items: center;
+  width: 60px; height: 60px; margin: auto; border-radius: 50%;
+  background: #42505dcf; border: 1px solid #d3d9df66;
+  font-size: 28px; will-change: transform;
+}
+.drive-hud .touch-driving [data-control="forward"] { min-width: 65px; height: 96px; background: #4a5841dc; }
+.drive-hud .touch-driving [data-control="brake"] { min-height: 68px; background: #593d3ddc; }
+@media (pointer:coarse) and (max-height:500px) {
+  .drive-top { top: 10px; }
+  .conditions { flex-basis: auto; margin-left: auto; }
+  .drive-bottom { bottom: 10px; }
+  .touch-driving { bottom: 86px; }
+  .drive-model { font-size: 17px; }
+  .drive-hud .steering-pad { width: 94px; height: 94px; padding: 10px; }
+  .drive-hud .touch-driving [data-control="forward"] { height: 80px; }
+}
+.drive-map {
+  position: absolute; top: 88px; right: 28px; width: 160px; height: 115px;
+  border: 1px solid #d0d8d52b; border-radius: 4px;
+  background: #0d181c9c; backdrop-filter: blur(10px);
+}
+@media (max-width:720px) {
+  .drive-map { top: 109px; right: 14px; width: 120px; height: 86px; }
+}
+@media (pointer:coarse) and (max-height:500px) {
+  .drive-map { top: 56px; right: 14px; width: 112px; height: 80px; }
+}
+@supports (padding:max(0px)) {
+  .drive-top { top: max(14px,env(safe-area-inset-top)); left: max(14px,env(safe-area-inset-left)); right: max(14px,env(safe-area-inset-right)); }
+  .drive-bottom { bottom: max(14px,env(safe-area-inset-bottom)); }
+}
+/* Automotive studio: matte walls, floor lighting and marque-specific colour. */
+.screen {
+  --accent: #b4bdc8;
+  background: radial-gradient(ellipse at 50% 42%,#30374080,transparent 65%),linear-gradient(180deg,#11151b 0%,#191f26 57%,#0d1014 100%);
+}
+.screen::after {
+  content: ''; position:absolute; z-index:-1; inset:0; pointer-events:none;
+  background: linear-gradient(170deg,transparent 56%,#ffffff06 56.2%,transparent 56.5%),radial-gradient(ellipse at 50% 78%,color-mix(in srgb,var(--accent) 13%,transparent),transparent 58%);
+}
+.screen[data-model="ferrari"] { --accent:#d52d34; }
+.screen[data-model="bmw"] { --accent:#4d91ca; }
+.screen[data-model="lamborghini"] { --accent:#93ad45; }
+.screen[data-model="bugatti"] { --accent:#286e9f; }
+.garage-backdrops {
+  position:absolute; z-index:-1; inset:0; margin:auto;
+  width:min(96%,1300px); height:min(88%,840px);
+  display:none; grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:clamp(8px,2vw,32px);
+}
+[data-catalog] .garage-backdrops { display:grid; }
+.garage-backdrops > div {
+  --tone:#bf303b; position:relative; overflow:hidden;
+  background:radial-gradient(ellipse at 50% 70%,color-mix(in srgb,var(--tone) 19%,transparent),transparent 67%),linear-gradient(163deg,#ffffff05,transparent 40%,#02030666);
+  border-bottom:1px solid #ffffff16;
+}
+.garage-backdrops > div::before {
+  content:'';position:absolute;width:50%;height:1px;left:25%;top:13%;background:#dbe7f04a;box-shadow:0 0 55px 13px #cde5ff0a;
+}
+.garage-backdrops [data-stage="bmw"] { --tone:#3873aa; }
+.garage-backdrops [data-stage="lamborghini"] { --tone:#879f3b; }
+.garage-backdrops [data-stage="bugatti"] { --tone:#226a92; }
+.vehicle-name { color:#eff0f0; }
+.vehicle-name small { display:block;font:500 .18em/1.4 system-ui,sans-serif;letter-spacing:.3em; }
+.vehicle-name strong { display:block;font:italic 900 1em/.95 Barlow,sans-serif;letter-spacing:-.015em; }
+.vehicle-name em { display:block;font:500 .15em/1.5 system-ui,sans-serif;letter-spacing:.42em;margin-top:.65em;font-style:normal;color:#b7c1cb; }
+h1.vehicle-name { top:7%;font-size:clamp(50px,11vmin,120px);text-shadow:0 3px 30px #0004; }
+h1[data-vehicle="lamborghini"] { font-size:clamp(36px,8.5vmin,93px); }
+.garage a > .vehicle-name { left:7%;bottom:5%;display:block;font-size:clamp(28px,4.7vmin,55px);line-height:1;gap:0;letter-spacing:0; }
+.garage a > [data-vehicle="lamborghini"] { font-size:clamp(22px,3.6vmin,42px); }
+.vehicle-name[data-vehicle="ferrari"] small { color:#f06460; }
+.vehicle-name[data-vehicle="ferrari"] strong { background:linear-gradient(110deg,#fff6e6 25%,#dcc4a1);background-clip:text;-webkit-text-fill-color:transparent; }
+.vehicle-name[data-vehicle="bmw"] em { color:#89b3d5; }
+.vehicle-name[data-vehicle="lamborghini"] em { color:#b1ca6a; }
+.vehicle-name[data-vehicle="bugatti"] small { color:#da5c65; }
+.m-stripes { display:inline-flex;gap:.035em;transform:skew(-20deg);margin-right:.16em;vertical-align:.015em;height:.7em; }
+.m-stripes b { display:block;width:.12em;height:100%;background:#78bce7; }
+.m-stripes b:nth-child(2) { background:#244e9b; }
+.m-stripes b:nth-child(3) { background:#d72d43; }
+.drive-hud button:not([data-quality]):not(.steering-pad) {
+  display:inline-grid;place-items:center;width:44px;height:44px;padding:10px;border-radius:9px;
+  background:#101b25b3;border-color:#ffffff26;box-shadow:0 4px 20px #00000012;
+}
+.drive-hud button svg { width:22px;height:22px; }
+.drive-hud .resume-drive { width:68px!important;height:68px!important;border-radius:50%!important;box-shadow:0 12px 60px #0008!important; }
+.resume-drive svg { width:30px!important;height:30px!important;margin-left:3px; }
+.drive-hud [data-quality] { border-radius:9px;min-height:44px; }
+@media (max-width:650px) {
+  h1.vehicle-name { top:12%;font-size:clamp(52px,15vw,80px); }
+  h1.vehicle-name[data-vehicle="lamborghini"] { font-size:10vw; }
+  .garage a > .vehicle-name { font-size:clamp(25px,6.6vw,38px);bottom:8%; }
+  .garage a > [data-vehicle="lamborghini"] { font-size:clamp(18px,4.5vw,27px); }
+  .vehicle-name small { font-size:.22em; }.vehicle-name em { font-size:.19em; }
+  .drive-hud button:not([data-quality]):not(.steering-pad) { width:40px;height:40px;padding:9px; }
+}
+.screen {
+  background-image:linear-gradient(180deg,#0c111b52,#0b0f1899),url('/assets/social/studio-backdrop.jpg');
+  background-size:cover;background-position:center;
+}
+.garage-backdrops > div { background-color:#080d122b; }
+/* Compact driving instruments; route names and settings only appear on demand. */
+.drive-toolbar { margin-left:auto;display:flex;gap:6px; }
+.drive-panel {
+  position:absolute;z-index:2;right:28px;top:70px;pointer-events:auto;
+  padding:10px;background:#10171df2;border:1px solid #dbe5ee2e;border-radius:12px;
+  box-shadow:0 12px 45px #0005;
+}
+.settings-panel { display:flex;gap:5px;align-items:center; }
+.route-panel { width:min(285px,calc(100vw - 28px)); }
+.panel-label { display:block;color:#abb9c3;padding:5px 8px 7px;font-size:11px;letter-spacing:.09em;text-transform:uppercase; }
+.drive-hud .route-panel button[data-route-option] {
+  width:100%;height:auto;min-height:47px;display:grid;grid-template-columns:20px 1fr auto;gap:10px;
+  margin:2px 0;text-align:left;place-items:center start;background:transparent;border-color:transparent;
+}
+.drive-hud .route-panel button[data-route-option]:is(:hover,[aria-pressed="true"]) {
+  background:#32404a;border-color:#c6dfed3a;
+}
+.route-panel button small { color:#c3d0d9;font-size:10px;white-space:nowrap; }
+.drive-hud .route-panel button svg { width:17px;height:17px;display:block; }
+.drive-top { position:absolute;justify-content:flex-start;flex-wrap:nowrap; }
+.drive-model { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.drive-map { top:70px;opacity:.78; }
+.drive-hud button:not([data-quality]):not(.steering-pad)[aria-pressed="true"] { color:#e8cb89;border-color:#e8cb8966; }
+.speedometer { border:1px solid #ffffff2b;border-radius:9px;min-width:141px; }
+[data-driving] .screen { background:#161c21; }
+@media(max-width:720px) {
+  .drive-panel { right:14px;top:65px; }
+  .drive-map { top:65px; }
+  .drive-model { font-size:clamp(14px,4vw,19px); }
+  .speedometer { min-width:126px; }
+}

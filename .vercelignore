@@ -1,0 +1,14 @@
+.git
+.vercel
+.env*
+.openai
+node_modules
+artwork
+tests
+scripts
+dist/assets/bugatti.glb
+dist/assets/social/collection.jpg
+dist/assets/social/ferrari.jpg
+dist/assets/social/bmw.jpg
+dist/assets/social/lamborghini.jpg
+dist/assets/social/bugatti.jpg

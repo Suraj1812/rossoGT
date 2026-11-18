@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Test Drive Lamborghini Aventador SVJ | Apex Drive</title>
+  <meta name="description" content="Take the Lamborghini Aventador SVJ onto long forest, coastal and desert highways. Switch camera views, weather and time of day in an interactive browser test drive.">
+  <meta name="site-origin" content="https://apex-drive-garage.vercel.app">
+  <meta name="theme-color" content="#11151b">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://apex-drive-garage.vercel.app/drive/lamborghini-aventador-svj/">
+  <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/icons/app-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="Apex Drive">
+  <meta property="og:title" content="Test Drive Lamborghini Aventador SVJ | Apex Drive">
+  <meta property="og:description" content="Take the Lamborghini Aventador SVJ onto long forest, coastal and desert highways. Switch camera views, weather and time of day in an interactive browser test drive.">
+  <meta property="og:url" content="https://apex-drive-garage.vercel.app/drive/lamborghini-aventador-svj/">
+  <meta property="og:image" content="https://apex-drive-garage.vercel.app/assets/social/models/lamborghini.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="629">
+  <meta property="og:image:alt" content="Render of the in-app 3D model of the Lamborghini Aventador SVJ in a concrete automotive studio.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Test Drive Lamborghini Aventador SVJ | Apex Drive">
+  <meta name="twitter:description" content="Take the Lamborghini Aventador SVJ onto long forest, coastal and desert highways. Switch camera views, weather and time of day in an interactive browser test drive.">
+  <meta name="twitter:image" content="https://apex-drive-garage.vercel.app/assets/social/models/lamborghini.jpg">
+  <meta name="twitter:image:alt" content="Render of the in-app 3D model of the Lamborghini Aventador SVJ in a concrete automotive studio.">
+  <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"Test Drive Lamborghini Aventador SVJ | Apex Drive","description":"Take the Lamborghini Aventador SVJ onto long forest, coastal and desert highways. Switch camera views, weather and time of day in an interactive browser test drive.","url":"https://apex-drive-garage.vercel.app/drive/lamborghini-aventador-svj/","image":"https://apex-drive-garage.vercel.app/assets/social/models/lamborghini.jpg","isPartOf":{"@type":"WebSite","name":"Apex Drive","url":"https://apex-drive-garage.vercel.app/"},"about":{"@type":"Vehicle","name":"Lamborghini Aventador SVJ","brand":{"@type":"Brand","name":"Lamborghini"}}}</script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script defer src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js" onload="window.dispatchEvent(new Event('iconsready'))" onerror="this.onerror=null;this.src='/assets/icons/lucide.min.js'"></script>
+  <link rel="license" href="/assets/credits.html">
+</head>
+<body>
+  <main class="journey">
+    <div class="screen" data-catalog>
+      <div class="garage-backdrops" aria-hidden="true"><div data-stage="ferrari"></div><div data-stage="bmw"></div><div data-stage="lamborghini"></div><div data-stage="bugatti"></div></div>
+      <nav class="garage" aria-label="Choose a car">
+        <a href="/cars/ferrari-458/" aria-label="Ferrari 458"><span>FERRARI <b>458</b></span></a>
+        <a href="/cars/bmw-m4-competition/" aria-label="BMW M4 Competition"><span>BMW <b>M4 COMPETITION</b></span></a>
+        <a href="/cars/lamborghini-aventador-svj/" aria-label="Lamborghini Aventador SVJ"><span>LAMBORGHINI <b>AVENTADOR SVJ</b></span></a>
+        <a href="/cars/bugatti-chiron/" aria-label="Bugatti Chiron"><span>BUGATTI <b>CHIRON</b></span></a>
+      </nav>
+      <h1 hidden>Ferrari 458</h1>
+      <button class="test-drive" type="button" hidden>Test drive <span aria-hidden="true">↗</span></button>
+      <canvas id="car" role="img" tabindex="0" aria-label="Four cars in the collection."></canvas>
+      <span class="sr-only" role="status"></span>
+    </div>
+  </main>
+  <section class="drive-hud" aria-label="Test drive controls" hidden>
+    <div class="drive-top">
+      <button type="button" data-exit-drive aria-label="Return to car">←</button>
+      <span class="drive-model" data-drive-model></span>
+      <div class="drive-toolbar">
+        <button type="button" data-theme aria-label="Choose route" aria-controls="drive-routes" aria-expanded="false"></button>
+        <button type="button" data-settings aria-label="Drive settings" aria-controls="drive-settings" aria-expanded="false"></button>
+      </div>
+    </div>
+    <div class="drive-panel route-panel" id="drive-routes" hidden>
+      <span class="panel-label">Route</span>
+      <div data-route-options></div>
+    </div>
+    <div class="drive-panel settings-panel" id="drive-settings" hidden>
+      <button type="button" data-quality aria-label="Graphics quality">Auto</button>
+      <button type="button" data-day aria-pressed="false" aria-label="Toggle night"></button>
+      <button type="button" data-rain aria-pressed="false" aria-label="Toggle rain"></button>
+      <button type="button" data-sound aria-pressed="false" aria-label="Mute sound"></button>
+      <button type="button" data-reset aria-label="Reset car"></button>
+    </div>
+    <canvas class="drive-map" data-drive-map aria-label="Route map with your car position"></canvas>
+    <div class="drive-bottom">
+      <div class="speedometer">
+        <div><strong data-speed>000</strong><span>KM/H</span><b data-gear>N</b></div>
+        <i><span data-revs></span></i>
+      </div>
+      <p class="sr-only">Use WASD or arrows to drive, Space to brake, H for horn, C for camera and R to reset.</p>
+      <div class="drive-actions">
+        <button type="button" data-pause aria-label="Pause drive"></button>
+        <button type="button" data-camera>Cabin</button>
+        <button type="button" data-control="horn">Horn</button>
+
+      </div>
+    </div>
+    <div class="touch-driving" aria-label="Touch driving controls">
+      <div><button type="button" class="steering-pad" data-steering-pad aria-label="Drag left or right to steer"><span aria-hidden="true">↔</span></button></div>
+      <div><button type="button" data-control="reverse" aria-label="Reverse">R</button><button type="button" data-control="brake" aria-label="Brake">Brake</button><button type="button" data-control="forward" aria-label="Accelerate">↑</button></div>
+    </div>
+    <button type="button" class="resume-drive" data-resume hidden>Resume drive</button>
+  </section>
+  <script>
+    const canvas = document.getElementById('car');
+    const statusMessage = document.querySelector('[role="status"]');
+    let retry = false;
+    function offerRetry(message) {
+      retry = true;
+      statusMessage.textContent = message + ' Tap the scene or press Enter to retry.';
+    }
+    canvas.addEventListener('click', () => { if (retry) location.reload(); });
+    canvas.addEventListener('keydown', event => {
+      if (retry && event.key === 'Enter') location.reload();
+    });
+    const watchdog = setTimeout(() => offerRetry('The 3D model is taking longer than expected.'), 12000);
+    import('/scene-BXHMDZ35.js').then(scene => scene.start()).then(() => {
+      retry = false;
+      statusMessage.textContent = '';
+    }).catch(error => {
+      offerRetry('The 3D model could not load.');
+      console.error(error);
+    }).finally(() => clearTimeout(watchdog));
+  </script>
+</body>
+</html>

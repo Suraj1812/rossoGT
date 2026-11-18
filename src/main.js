@@ -1,92 +1,116 @@
 import * as T from './vendor/three.module.js';
-import {createCar} from './model.js';
 import {HDRLoader} from './vendor/HDRLoader.js';
+import {createCar} from './model.js';
+import {createBmw} from './bmw.js';
+import {createLamborghini,createBugatti} from './supercars.js';
+import {createViewer} from './viewer.js';
+import {createDrive} from './drive.js';
+import {styleVehicleName} from './vehicle-name.js';
+import {resolveRoute,carPath} from './routes.js';
+import {updatePageMetadata} from './page-meta.js';
 
-const select = selector => document.querySelector(selector);
-const screen = select('.screen');
-const journey = select('.journey');
-const canvas = select('#car');
+const screen = document.querySelector('.screen');
+const journey = document.querySelector('.journey');
+const canvas = document.querySelector('#car');
+const title = document.querySelector('h1');
+const status = document.querySelector('[role="status"]');
+const garage = document.querySelector('.garage');
+const choices = [...garage.querySelectorAll('a')];
+const driveButton = document.querySelector('.test-drive');
+choices.forEach((choice,index)=>styleVehicleName(choice.querySelector('span'),index));
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const stageLabel = select('#stageLabel');
-const stageView = select('#stageView');
-const percent = select('#percent');
-const next = select('.next');
-const nextIcon = select('#nextIcon');
-const zoomControls = select('.zoom-controls');
-const zoomOut = select('#zoomOut');
-const zoomIn = select('#zoomIn');
 
-const chapters = [
-  {label:'EXPLODED VIEW',view:'',next:'Start assembly',href:'#assembly',image:'Red supercar components floating in an exploded view'},
-  {label:'ASSEMBLY',view:'',next:'See the car',href:'#reveal',image:'Body panels, lights, brakes, and wheels moving into position'},
-  {label:'COMPLETE',view:'DRAG TO ROTATE',next:'Replay',href:'#exploded',image:'Completed red Ferrari 458. Use the arrow keys to rotate it, or plus and minus to zoom.'}
-];
 const clamp = value => T.MathUtils.clamp(value,0,1);
-const smooth = value => {
-  const x=clamp(value);
+function smooth(value) {
+  const x = clamp(value);
   return x*x*(3-2*x);
-};
-let stage=-1;
-let assembly=0;
-let dirty=true;
-let view;
-let angle=0;
-let zoom=1;
-const maximumZoom=1.75;
-function setZoom(value) {
-  zoom=T.MathUtils.clamp(value,1,maximumZoom);
-  zoomOut.disabled=zoom===1;
-  zoomIn.disabled=zoom===maximumZoom;
-  dirty=true;
 }
-zoomOut.addEventListener('click',()=>setZoom(zoom-.25));
-zoomIn.addEventListener('click',()=>setZoom(zoom+.25));
-let activePointer=null;
+
+const vehicles = [
+  {id:'ferrari',name:'Ferrari 458',load:createCar},
+  {id:'bmw',name:'BMW M4 Competition',load:createBmw},
+  {id:'lamborghini',name:'Lamborghini Aventador SVJ',load:createLamborghini},
+  {id:'bugatti',name:'Bugatti Chiron',load:createBugatti}
+];
+let viewer;
+let drive;
+let selectVehicle;
+let vehicleIndex = -1;
+let assembly = 0;
+let complete = false;
+let dirty = true;
+let active;
+let routing=false;
+let startDrive;
+let appReady=false;
+let pendingDrive=false;
+
+function syncView() {
+  screen.toggleAttribute('data-complete',complete && Boolean(active));
+  title.hidden = !complete || !active || viewer.mode !== 'exterior' || drive?.running;
+  driveButton.hidden = title.hidden;
+  dirty = true;
+}
 
 function syncProgress() {
-  const range=Math.max(1,journey.offsetHeight-screen.offsetHeight);
-  const travel=clamp(-journey.getBoundingClientRect().top/range);
-  const incoming=travel<.235?0:travel<.955?1:2;
-  const value=clamp((travel-.235)/.72);
-  assembly=reduceMotion.matches ? Math.floor(value*4+.001)/4 : value;
-  if (incoming!==stage) {
-    stage=incoming;
-    const data=chapters[stage];
-    const number=String(stage+1).padStart(2,'0');
-    screen.dataset.stage=stage;
-    stageLabel.textContent=number+' / '+data.label;
-    stageView.textContent=data.view;
-    next.href=data.href;
-    next.setAttribute('aria-label',data.next);
-    next.title=data.next;
-    nextIcon.textContent=stage===2?'↺':'↓';
-    canvas.tabIndex=stage===2&&view?0:-1;
-    zoomControls.hidden=stage!==2||!view;
-    canvas.setAttribute('aria-label',data.image);
-    select('.assembly-title').setAttribute('aria-hidden',String(stage!==1));
-    select('.reveal-title').setAttribute('aria-hidden',String(stage!==2));
-  }
-  if(stage!==2) {
-    angle=0;
-    if(zoom!==1) setZoom(1);
-    activePointer=null;
-  }
-  percent.textContent=Math.round(value*100)+'%';
-  dirty=true;
+  if(drive?.running) return;
+  const range = Math.max(1,journey.offsetHeight-screen.offsetHeight);
+  const offset = Math.max(0,-journey.getBoundingClientRect().top);
+  const progress = clamp(offset/range);
+  const value = vehicleIndex < 0 ? 0 : clamp((progress-.235)/.72);
+  complete = value === 1;
+  assembly = reduceMotion.matches ? Math.floor(value*4)/4 : value;
+  selectVehicle?.(vehicleIndex);
+  viewer?.setComplete(complete && Boolean(active));
+  syncView();
+}
+
+function readRoute(resetScroll) {
+  const route=resolveRoute(location.href);
+  if(route.mode==='not-found'){location.replace('/404.html');return;}
+  routing=true;
+  if(drive?.running)drive.end();
+  routing=false;
+  if(route.legacy)history.replaceState(null,'',route.path);
+  updatePageMetadata(route);
+  vehicleIndex=route.index;
+  const catalog=vehicleIndex<0;
+  screen.toggleAttribute('data-catalog',catalog);
+  screen.dataset.model=catalog?'':vehicles[vehicleIndex].id;
+  journey.toggleAttribute('data-selected',!catalog);
+  canvas.tabIndex=catalog?-1:0;canvas.setAttribute('aria-hidden',String(catalog));
+  if(catalog)canvas.setAttribute('aria-label','Four cars in the collection.');
+  if(['explore','drive'].includes(route.mode)&&!catalog)window.scrollTo(0,journey.offsetHeight);
+  else if(resetScroll||catalog)window.scrollTo(0,0);
+  syncProgress();maybeStartDrive();
+}
+function choose(path,replace=false) {
+  const url=new URL(path,location.href);
+  if(url.href!==location.href)history[replace?'replaceState':'pushState'](null,'',url);
+  readRoute(true);
+}
+function maybeStartDrive() {
+  if(!appReady||!active||drive?.running||pendingDrive||resolveRoute(location.href).mode!=='drive')return;
+  pendingDrive=true;
+  Promise.resolve().then(()=>startDrive(true)).finally(()=>{pendingDrive=false;});
+}
+choices.forEach(choice=>choice.addEventListener('click',event=>{
+  if(event.ctrlKey||event.metaKey||event.altKey||event.shiftKey)return;
+  event.preventDefault();choose(choice.getAttribute('href'));canvas.focus({preventScroll:true});
+}));
+function openCatalog() {
+  const previous = vehicleIndex;
+  choose('/');
+  choices[previous]?.focus({preventScroll:true});
 }
 window.addEventListener('scroll',syncProgress,{passive:true});
 window.addEventListener('resize',syncProgress);
-reduceMotion.addEventListener('change',syncProgress);
-
-next.addEventListener('click',event=>{
-  if (event.metaKey||event.ctrlKey||event.shiftKey||event.altKey) return;
-  const hash=next.hash;
-  const target=select(hash);
-  if (!target) return;
-  event.preventDefault();
-  if(location.hash!==hash) history.pushState(null,'',hash);
-  target.scrollIntoView({behavior:reduceMotion.matches?'instant':'smooth'});
+window.addEventListener('hashchange',()=>readRoute(true));
+window.addEventListener('popstate',()=>readRoute(true));
+window.addEventListener('keydown',event=>{
+  if(!drive?.running && event.key==='Escape' && !event.defaultPrevented && vehicleIndex>=0 && viewer?.mode==='exterior') openCatalog();
 });
+reduceMotion.addEventListener('change',syncProgress);
 
 function studioLighting(renderer) {
   const map=document.createElement('canvas');
@@ -114,59 +138,136 @@ function studioLighting(renderer) {
   generator.dispose();
   return environment;
 }
-function shadowTexture() {
-  const image=document.createElement('canvas');
-  image.width=image.height=128;
-  const ctx=image.getContext('2d');
-  const shadow=ctx.createRadialGradient(64,64,0,64,64,63);
-  shadow.addColorStop(0,'rgba(0,0,0,.77)');
-  shadow.addColorStop(.43,'rgba(0,0,0,.55)');
-  shadow.addColorStop(.73,'rgba(0,0,0,.17)');
-  shadow.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=shadow;
-  ctx.fillRect(0,0,128,128);
-  const texture=new T.CanvasTexture(image);
-  texture.colorSpace=T.SRGBColorSpace;
-  return texture;
-}
-
 async function init() {
-  const renderer=new T.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'high-performance'});
+  const renderer = new T.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'high-performance'});
   renderer.setClearColor(0,0);
-  renderer.toneMapping=T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=1.16;
-  const scene=new T.Scene();
-  const lighting=new HDRLoader().loadAsync(new URL('./assets/studio.hdr',import.meta.url)).catch(()=>null);
-  const {rig,parts}=await createCar();
-  scene.environment=studioLighting(renderer).texture;
+  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.07;
+  const scene = new T.Scene();
+  drive = createDrive(renderer,scene,()=>{
+    active.rig.visible=true;
+    viewer.setVehicle(active,vehicles[vehicleIndex].name);
+    if(!routing&&resolveRoute(location.href).mode==='drive')choose(carPath(vehicleIndex,'explore'),true);
+    else syncProgress();
+  });
+  const drivingModels=new Map();
+  startDrive=async(deeplink=false)=>{
+    if(!active||!complete||drive.running||driveButton.disabled)return;
+    if(!deeplink)drive.unlockAudio();
+    const selected=vehicleIndex;
+    const requestedPath=location.pathname;
+    driveButton.disabled=true;
+    driveButton.textContent='Preparing drive…';
+    try {
+      let vehicle=active;
+      if(vehicles[selected].id==='bugatti'&&matchMedia('(pointer: coarse)').matches) {
+        if(!drivingModels.has(selected))drivingModels.set(selected,createBugatti({driving:true}));
+        vehicle=await drivingModels.get(selected);
+        if(selected!==vehicleIndex||!complete||location.pathname!==requestedPath)return;
+        if(!vehicle.rig.parent)scene.add(vehicle.rig);
+      }
+      drive.begin(vehicle,vehicles[selected]);
+      const theme=new URL(location.href).searchParams.get('theme');if(theme)drive.setTheme(theme);
+      if(deeplink)drive.pause();
+      else {history.pushState(null,'',carPath(selected,'drive'));updatePageMetadata(resolveRoute(location.href));}
+      if(vehicle!==active)active.rig.visible=false;
+      viewer.setComplete(false);
+      canvas.setAttribute('aria-label','Driving '+vehicles[selected].name+'. Use WASD or arrow keys to drive, Space to brake, H for horn, C for cabin and Escape to exit.');
+      canvas.focus({preventScroll:true});syncView();
+    } catch(error) {
+      drivingModels.delete(selected);
+      status.textContent='Drive could not start. Please try again.';
+      console.error(error);
+    } finally {
+      driveButton.disabled=false;driveButton.innerHTML='Test drive <span aria-hidden="true">↗</span>';
+    }
+  };
+  driveButton.addEventListener('click',()=>startDrive(false));
+  const lighting = new HDRLoader().loadAsync(new URL('./assets/studio.hdr',import.meta.url)).catch(()=>null);
+  const pending = new Map();
+  const loaded = new Map();
+  const previewCamera = new T.PerspectiveCamera(38,1,.05,50);
+  let hovered = -1;
+  choices.forEach((choice,index)=>{
+    choice.addEventListener('pointerenter',()=>{hovered = index; dirty = true;});
+    choice.addEventListener('pointerleave',()=>{hovered = -1; dirty = true;});
+  });
+  function loadVehicle(index) {
+    if(!pending.has(index)) {
+      const request = vehicles[index].load().then(model=>{
+        model.rig.visible = false;
+        scene.add(model.rig);
+        loaded.set(index,model);
+        if(index===vehicleIndex) syncProgress();
+        dirty = true;
+        return model;
+      }).catch(error=>{
+        pending.delete(index);
+        throw error;
+      });
+      pending.set(index,request);
+    }
+    return pending.get(index);
+  }
+
+  viewer = createViewer(canvas,mode=>{
+    active?.setMirrors?.(mode!=='exterior');
+    syncView();
+  },openCatalog);
+  selectVehicle = index=>{
+    if(active && (index<0 || active!==loaded.get(index))) {
+      active.rig.visible = false;
+      active.setMirrors?.(false);
+      active = undefined;
+    }
+    if(index<0) return;
+    const model = loaded.get(index);
+    if(!model) {
+      const name = vehicles[index].name;
+      canvas.setAttribute('aria-label',name+' 3D model');
+      status.textContent = 'Loading '+name+'.';
+      loadVehicle(index).catch(error=>{
+        if(index===vehicleIndex) status.textContent = name+' could not load. Reload to try again.';
+        console.error(error);
+      });
+      return;
+    }
+    if(active===model){maybeStartDrive();return;}
+    active = model;
+    active.rig.visible = true;
+    active.catalogReady = false;
+    styleVehicleName(title,index);
+    status.textContent = '';
+    viewer.setVehicle(active,vehicles[index].name);
+    maybeStartDrive();
+  };
+  readRoute(false);
+  const initial = Math.max(vehicleIndex,0);
+  await loadVehicle(initial);
+  for(const [index,vehicle] of vehicles.entries()) {
+    if(index===initial) continue;
+    loadVehicle(index).catch(error=>{
+      if(index===vehicleIndex) status.textContent = vehicle.name+' could not load. Reload to try again.';
+      console.error(error);
+    });
+  }
+  scene.environment = studioLighting(renderer).texture;
   lighting.then(texture=>{
     if(!texture) return;
-    texture.mapping=T.EquirectangularReflectionMapping;
-    scene.environment=texture;
-    dirty=true;
+    texture.mapping = T.EquirectangularReflectionMapping;
+    scene.environment = texture;
+    dirty = true;
   });
-  scene.environmentIntensity=.69;
-  scene.environmentRotation.y=-.9;
-  const camera=new T.OrthographicCamera(-1,1,1,-1,.1,100);
-  camera.position.set(6.9,3.3,6.18);
-  camera.lookAt(0,.66,0);
-  camera.updateMatrixWorld();
-  const across=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
-  const up=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,1);
-  const center=new T.Vector3(0,.66,0);
-  const shadow=shadowTexture();
-  scene.add(new T.HemisphereLight(0xfff7e8,0x666d80,.65));
-  for (const [position,color,intensity] of [[[1,7,5],0xfff6ed,1.35],[[-3,3,1],0xdbe6ff,.94],[[2,5,-6],0xffede0,1.55]]) {
-    const light=new T.DirectionalLight(color,intensity);
+  scene.environmentIntensity = .62;
+  scene.environmentRotation.y = -.9;
+  scene.add(new T.HemisphereLight(0xfff7e8,0x575e76,.45));
+  for(const [position,color,intensity] of [
+    [[1,7,5],0xfff6ed,1.42],[[-3,3,1],0xdbe6ff,.72],[[2,5,-6],0xffede0,1.27],[[-4,-5,1],0xd3e3f4,.64]
+  ]) {
+    const light = new T.DirectionalLight(color,intensity);
     light.position.set(...position);
     scene.add(light);
   }
-  scene.add(rig);
-  const floorMaterial=new T.MeshBasicMaterial({map:shadow,transparent:true,depthWrite:false,opacity:0});
-  const floor=new T.Mesh(new T.PlaneGeometry(3.34,5.65),floorMaterial);
-  floor.rotation.x=-Math.PI/2;
-  floor.position.y=.021;
-  rig.add(floor);
   const mobilePositions={
     front:[-.09,.078],rear:[.19,-.218],cabin:[-.255,-.171],floor:[.009,-.347],
     doorRight:[.067,.359],doorLeft:[-.363,.044],
@@ -175,138 +276,133 @@ async function init() {
     brake_wheel_rl:[.35,.01],brake_wheel_rr:[-.346,-.123],
     headlampLeft:[-.274,.135],headlampRight:[-.087,.283],
     tailLeft:[.374,-.261],tailRight:[.254,-.321],
-    windshield:[-.11,-.274],cockpit:[-.272,-.384]
+    windshield:[-.11,-.274],cockpit:[-.272,-.384],engine:[.19,.365]
   };
-  const temporaryPosition=new T.Vector3();
-  const heroRotation=new T.Quaternion();
-  const bodyRotation=new T.Quaternion();
-  const assembledRotation=new T.Quaternion();
-  const euler=new T.Euler();
-  const axis=new T.Vector3(0,1,0);
-  const inverseRotation=new T.Quaternion();
-  let width=0,height=0,aspect=1,verticalSize=4.9;
-  let resized=true;
-  const observer=new ResizeObserver(()=>{resized=true;dirty=true;});
+  const across = new T.Vector3();
+  const up = new T.Vector3();
+  const center = new T.Vector3(0,.62,0);
+  const heroRotation = new T.Quaternion();
+  const assembledRotation = new T.Quaternion();
+  const euler = new T.Euler();
+  const started = performance.now();
+  let width = 1;
+  let height = 1;
+  let resized = true;
+  let contextLost = false;
+  let assembledModel;
+  const observer = new ResizeObserver(()=>{resized = true; dirty = true;});
   observer.observe(canvas);
-  const started=performance.now();
-  let rotation=0;
-  let lens=1;
-  let rendered=false;
-  let contextLost=false;
-  const status=select('.graphics-status');
   canvas.addEventListener('webglcontextlost',event=>{
     event.preventDefault();
-    contextLost=true;
-    status.querySelector('span').textContent='3D rendering paused.';
-    select('.graphics-status').querySelector('button').hidden=false;
-    status.hidden=false;
+    contextLost = true;
+    status.textContent = '3D rendering paused.';
   });
   canvas.addEventListener('webglcontextrestored',()=>{
-    contextLost=false;
-    status.hidden=true;
-    dirty=true;
+    contextLost = false;
+    status.textContent = '';
+    dirty = true;
   });
+
+  function drawCatalog() {
+    renderer.setScissorTest(false);
+    renderer.setViewport(0,0,width,height);
+    renderer.clear();
+    renderer.setScissorTest(true);
+    for(const [index,model] of loaded.entries()) {
+      if(!model.catalogReady) {
+        for(const part of model.parts) {
+          part.group.position.copy(part.center);
+          part.group.quaternion.identity();
+          part.group.scale.setScalar(1);
+        }
+        model.catalogReady = true;
+      }
+      const box = choices[index].getBoundingClientRect();
+      if(box.width===0 || box.height===0) continue;
+      const aspect = box.width/box.height;
+      const distance = Math.max(4.35,5.25/aspect)/(2*Math.tan(Math.PI*19/180));
+      const yaw = .77 + (hovered === index ? .14 : 0);
+      previewCamera.aspect = aspect;
+      previewCamera.updateProjectionMatrix();
+      previewCamera.position.set(Math.sin(yaw)*distance,.62+distance*.25,Math.cos(yaw)*distance);
+      previewCamera.lookAt(0,.62,0);
+      renderer.setViewport(box.left,height-box.bottom,box.width,box.height);
+      renderer.setScissor(box.left,height-box.bottom,box.width,box.height);
+      model.rig.visible = true;
+      renderer.render(scene,previewCamera);
+      model.rig.visible = false;
+    }
+    renderer.setScissorTest(false);
+    renderer.setViewport(0,0,width,height);
+  }
 
   function draw(now) {
     if(contextLost) return;
-    const idle=!reduceMotion.matches&&stage===0;
-    const moving=Math.abs(angle-rotation)>.0008;
-    const zooming=Math.abs(zoom-lens)>.0008;
-    if(!dirty&&!idle&&!moving&&!zooming&&rendered) return;
-    dirty=false;
+    const idle = drive.running || vehicleIndex>=0 && !reduceMotion.matches && assembly === 0;
+    if(!dirty && !idle) return;
+    dirty = false;
     if(resized) {
-      resized=false;
-      width=Math.max(1,canvas.clientWidth);
-      height=Math.max(1,canvas.clientHeight);
-      aspect=width/height;
-      verticalSize=Math.max(4.58,5.5/aspect);
-      renderer.setPixelRatio(Math.min(devicePixelRatio,width<650?1.65:1.85));
+      resized = false;
+      width = Math.max(1,canvas.clientWidth);
+      height = Math.max(1,canvas.clientHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio,width<650 ? 1.65 : 1.85));
       renderer.setSize(width,height,false);
-      camera.left=-verticalSize*aspect/2;
-      camera.right=verticalSize*aspect/2;
-      camera.top=verticalSize/2;
-      camera.bottom=-verticalSize/2;
-      camera.updateProjectionMatrix();
     }
-    const t=(now-started)/1000;
-    const isCompact=width<650;
-    const horizontalSize=verticalSize*aspect;
-    const start=smooth(t/1.1);
-    const completion=smooth(assembly);
-    rotation=reduceMotion.matches||!moving?angle:T.MathUtils.lerp(rotation,angle,.15);
-    const pose=T.MathUtils.lerp(-.08,.035,completion)+rotation*completion;
-    bodyRotation.setFromAxisAngle(axis,pose);
-    inverseRotation.copy(bodyRotation).invert();
-    rig.quaternion.copy(bodyRotation);
-    rig.position.copy(up).multiplyScalar(T.MathUtils.lerp(0,-verticalSize*(isCompact?.032:.075),completion));
-    rig.scale.setScalar(T.MathUtils.lerp(1,isCompact?1.05:1.24,completion));
-    lens=reduceMotion.matches||!zooming?zoom:T.MathUtils.lerp(lens,zoom,.22);
-    if(camera.zoom!==lens) {
-      camera.zoom=lens;
-      camera.updateProjectionMatrix();
+    if(drive.running) {
+      drive.frame(now,width,height);
+      return;
     }
-    floorMaterial.opacity=completion*.82;
-    parts.forEach((part,index)=>{
-      const fraction=smooth((assembly-part.delay*.45)/(.88-part.delay*.45));
-      const [x,y]=isCompact?mobilePositions[part.name]:part.position;
-      const float=idle?Math.sin(t*.92+index*1.17)*.042:0;
-      temporaryPosition.copy(center)
-        .addScaledVector(across,x*Math.min(horizontalSize,12)+(reduceMotion.matches?0:(1-start)*(x<0?-.16:.16)))
-        .addScaledVector(up,y*verticalSize+float);
-      temporaryPosition.applyQuaternion(inverseRotation);
-      part.group.position.copy(temporaryPosition).lerp(part.center,fraction);
-      const [pitch,yaw,roll]=part.rotation;
-      euler.set(pitch,yaw+(idle?Math.sin(t*.63+index)*.04:0),roll);
-      heroRotation.setFromEuler(euler);
-      part.group.quaternion.copy(heroRotation).slerp(assembledRotation,fraction);
-      const compactScale=isCompact?Math.min(.92,width/476):1;
-      const heroScale=part.size*compactScale*(reduceMotion.matches?1:.94+.06*start);
-      part.group.scale.setScalar(T.MathUtils.lerp(heroScale,1,fraction));
-    });
-    renderer.render(scene,camera);
-    rendered=true;
+    if(vehicleIndex<0) {
+      drawCatalog();
+      assembledModel = undefined;
+      return;
+    }
+    const compact = width < 720;
+    const aspect = width / height;
+    const verticalSize = Math.max(4.8,5.35/aspect);
+    if(!active) {
+      renderer.clear();
+      return;
+    }
+    viewer.position(aspect,verticalSize);
+    // Once joined, keep the car in world space while the camera orbits it.
+    if(assembledModel!==active || !complete) {
+      across.setFromMatrixColumn(viewer.camera.matrixWorld,0);
+      up.setFromMatrixColumn(viewer.camera.matrixWorld,1);
+      const t = (now-started)/1000;
+      const horizontalSize = verticalSize*aspect;
+      const launch = reduceMotion.matches ? 1 : smooth(t/1.1);
+      for(const [index,part] of active.parts.entries()) {
+        const fraction = smooth((assembly-part.delay*.45)/(.99-part.delay*.45));
+        const [x,y] = compact ? mobilePositions[part.name] : part.position;
+        const float = idle ? Math.sin(t*.92+index*1.17)*.042 : 0;
+        part.group.position.copy(center)
+          .addScaledVector(across,x*Math.min(horizontalSize,12)+(1-launch)*Math.sign(x)*.16)
+          .addScaledVector(up,y*verticalSize+float)
+          .lerp(part.center,fraction);
+        const [pitch,yaw,roll] = part.rotation;
+        euler.set(pitch,yaw+(idle ? Math.sin(t*.63+index)*.04 : 0),roll);
+        part.group.quaternion.copy(heroRotation.setFromEuler(euler)).slerp(assembledRotation,fraction);
+        const compactScale = compact ? Math.min(.92,width/476) : 1;
+        part.group.scale.setScalar(T.MathUtils.lerp(part.size*compactScale*(.94+.06*launch),1,fraction));
+      }
+      assembledModel = complete ? active : undefined;
+    }
+    renderer.render(scene,viewer.camera);
   }
+
   function frame(now) {
     draw(now);
     requestAnimationFrame(frame);
   }
+  // Reveal the title only after a successful first frame.
+  syncProgress();
   draw(performance.now());
+  syncView();
   requestAnimationFrame(frame);
-  return {renderer};
+  appReady=true;maybeStartDrive();
 }
-
-canvas.addEventListener('pointerdown',event=>{
-  if(stage!==2||activePointer||event.button!==0||!view) return;
-  activePointer={id:event.pointerId,x:event.clientX};
-  canvas.setPointerCapture(event.pointerId);
-});
-canvas.addEventListener('pointermove',event=>{
-  if(activePointer?.id!==event.pointerId) return;
-  angle+=(event.clientX-activePointer.x)*.011;
-  activePointer.x=event.clientX;
-  dirty=true;
-});
-for(const type of ['pointerup','pointercancel','lostpointercapture']) {
-  canvas.addEventListener(type,event=>{
-    if(activePointer?.id===event.pointerId) activePointer=null;
-  });
-}
-canvas.addEventListener('keydown',event=>{
-  if(stage!==2||!view) return;
-  if(['+','=','-'].includes(event.key)) {
-    event.preventDefault();
-    setZoom(zoom+(event.key==='-'?-.25:.25));
-  } else if(event.key==='ArrowLeft'||event.key==='ArrowRight') {
-    event.preventDefault();
-    angle+=event.key==='ArrowRight'?.21:-.21;
-    dirty=true;
-  }
-});
 
 export async function start() {
-  syncProgress();
-  view=await init();
-  screen.classList.add('is-ready');
-  canvas.tabIndex=stage===2?0:-1;
-  zoomControls.hidden=stage!==2;
+  await init();
 }
